@@ -1,0 +1,1 @@
+-I/home/shang/Code/kuda/include -I/home/shang/Code/kuda/src -I"/usr/local/cuda-13.1/targets/x86_64-linux/include" -I"/home/shang/Code/kuda/build/_deps/nlohmann_json-src/include" -I"/home/shang/Code/kuda/build/_deps/fmt-src/include" -isystem "/home/shang/Code/kuda/build/_deps/cli11-src/include"
