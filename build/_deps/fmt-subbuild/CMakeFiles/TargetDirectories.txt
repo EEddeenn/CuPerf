@@ -1,3 +1,0 @@
-/home/shang/Code/kuda/build/_deps/fmt-subbuild/CMakeFiles/fmt-populate.dir
-/home/shang/Code/kuda/build/_deps/fmt-subbuild/CMakeFiles/edit_cache.dir
-/home/shang/Code/kuda/build/_deps/fmt-subbuild/CMakeFiles/rebuild_cache.dir
