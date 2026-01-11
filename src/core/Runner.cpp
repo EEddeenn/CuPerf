@@ -62,22 +62,25 @@ BenchmarkResult Runner::execute_single_case(const RunPlan::CaseConfig& config_ca
     benchmark->setup(ctx, config_case.params);
     benchmark->run_warmup(ctx, config_case.params);
     result = benchmark->run_measure(ctx, config_case.params);
-    benchmark->teardown(ctx);
 
     if (config_.verify_results) {
-      verify_results(result);
+      bool verified = benchmark->verify_result(ctx);
+      if (!verified) {
+        result.warnings.push_back("Verification failed");
+      } else {
+        result.success = true;
+      }
+    } else {
+      result.success = true;
     }
 
-    result.success = true;
+    benchmark->teardown(ctx);
   } catch (const std::exception& e) {
     benchmark->teardown(ctx);
     result.warnings.push_back(std::string("Execution failed: ") + e.what());
   }
 
   return result;
-}
-
-void Runner::verify_results(const BenchmarkResult& result) {
 }
 
 }

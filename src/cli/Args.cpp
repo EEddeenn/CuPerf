@@ -21,6 +21,9 @@ Args Args::parse(int argc, char* argv[]) {
   auto run_cmd = app.add_subcommand("run", "Run benchmarks");
   run_cmd->callback([&] { args.command_ = Command::Run; });
 
+  auto selftest_cmd = app.add_subcommand("selftest", "Run basic smoke tests");
+  selftest_cmd->callback([&] { args.command_ = Command::Selftest; });
+
   auto& config = args.config_;
 
   run_cmd->add_option("-d,--device", config.device_index, "GPU device index")
@@ -107,6 +110,7 @@ std::string Args::to_string() const {
     case Command::Info: str = "info"; break;
     case Command::List: str = "list"; break;
     case Command::Run: str = "run"; break;
+    case Command::Selftest: str = "selftest"; break;
     case Command::Help: str = "help"; break;
   }
 

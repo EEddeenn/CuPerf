@@ -12,6 +12,7 @@ public:
   static int execute_info(const Args& args);
   static int execute_list(const Args& args);
   static int execute_run(const Args& args);
+  static int execute_selftest(const Args& args);
 
 private:
   static void print_system_info();

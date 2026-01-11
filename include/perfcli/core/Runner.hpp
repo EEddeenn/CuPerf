@@ -35,8 +35,6 @@ private:
 
   BenchmarkContext create_context();
 
-  void verify_results(const BenchmarkResult& result);
-
   RunConfig config_;
   DeviceManager& device_manager_;
 };

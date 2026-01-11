@@ -4,6 +4,8 @@
 #include "perfcli/cuda/Stream.hpp"
 #include "perfcli/core/Statistics.hpp"
 #include <format>
+#include <cstring>
+#include <vector>
 
 namespace perfcli {
 
@@ -214,6 +216,41 @@ void DeviceMemBandwidth::teardown(BenchmarkContext& ctx) {
     d_dst_ = nullptr;
   }
   ctx.sync_all();
+}
+
+bool DeviceMemBandwidth::verify_result(BenchmarkContext& ctx) {
+  const size_t verify_size = std::min(size_, size_t(1024 * 1024));
+  const size_t n = verify_size / sizeof(float);
+
+  std::vector<float> src_h(n, 1.0f);
+  std::vector<float> dst_h(n, 0.0f);
+
+  float* d_verify_src = nullptr;
+  float* d_verify_dst = nullptr;
+
+  CUDA_CHECK(cudaMalloc(&d_verify_src, verify_size));
+  CUDA_CHECK(cudaMalloc(&d_verify_dst, verify_size));
+
+  CUDA_CHECK(cudaMemcpy(d_verify_src, src_h.data(), verify_size, cudaMemcpyHostToDevice));
+
+  int block_size = 256;
+  int grid_size = (n + block_size - 1) / block_size;
+  copy_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(d_verify_dst, d_verify_src, n);
+
+  CUDA_CHECK(cudaMemcpy(dst_h.data(), d_verify_dst, verify_size, cudaMemcpyDeviceToHost));
+
+  bool verified = true;
+  for (size_t i = 0; i < n && verified; ++i) {
+    if (dst_h[i] != 1.0f) {
+      verified = false;
+    }
+  }
+
+  cudaFree(d_verify_src);
+  cudaFree(d_verify_dst);
+  CUDA_CHECK_LAST();
+
+  return verified;
 }
 
 }

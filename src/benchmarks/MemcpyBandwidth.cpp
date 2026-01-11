@@ -4,6 +4,8 @@
 #include "perfcli/cuda/Stream.hpp"
 #include "perfcli/core/Statistics.hpp"
 #include <format>
+#include <cstring>
+#include <algorithm>
 
 namespace perfcli {
 
@@ -55,9 +57,6 @@ void MemcpyBandwidth::setup(BenchmarkContext& ctx, const std::map<std::string, s
   };
 
   size_ = parse_size(size_str);
-  DataType dtype = string_to_data_type(dtype_str);
-  size_t element_size = data_type_size(dtype);
-  size_t num_elements = size_ / element_size;
 
   direction_ = (direction_str == "H2D") ? Direction::HostToDevice :
                 (direction_str == "D2H") ? Direction::DeviceToHost :
@@ -68,13 +67,14 @@ void MemcpyBandwidth::setup(BenchmarkContext& ctx, const std::map<std::string, s
 
   HostMemoryType host_type = use_pinned_ ? HostMemoryType::Pinned : HostMemoryType::Pageable;
 
-  d_ptr_ = nullptr;
-  CUDA_CHECK(cudaMalloc(&d_ptr_, size_));
+  size_t num_elements = size_ / sizeof(uint8_t);
+  d_buffer_ = std::make_unique<DeviceBuffer<uint8_t>>(num_elements);
 
   if (direction_ == Direction::HostToDevice || direction_ == Direction::DeviceToHost) {
-    h_ptr_ = malloc(size_);
+    h_buffer_ = std::make_unique<HostBuffer<uint8_t>>(num_elements, host_type);
   } else {
-    h_ptr_ = nullptr;
+    h_buffer_ = nullptr;
+    d_buffer2_ = std::make_unique<DeviceBuffer<uint8_t>>(num_elements);
   }
 
   CUDA_CHECK_LAST();
@@ -85,14 +85,11 @@ void MemcpyBandwidth::run_warmup(BenchmarkContext& ctx, const std::map<std::stri
 
   for (int i = 0; i < warmup_iters; ++i) {
     if (direction_ == Direction::HostToDevice) {
-      CUDA_CHECK(cudaMemcpyAsync(d_ptr_, h_ptr_, size_, cudaMemcpyHostToDevice, ctx.streams[0]->get()));
+      CUDA_CHECK(cudaMemcpyAsync(d_buffer_->get(), h_buffer_->get(), size_, cudaMemcpyHostToDevice, ctx.streams[0]->get()));
     } else if (direction_ == Direction::DeviceToHost) {
-      CUDA_CHECK(cudaMemcpyAsync(h_ptr_, d_ptr_, size_, cudaMemcpyDeviceToHost, ctx.streams[0]->get()));
+      CUDA_CHECK(cudaMemcpyAsync(h_buffer_->get(), d_buffer_->get(), size_, cudaMemcpyDeviceToHost, ctx.streams[0]->get()));
     } else {
-      void* d_ptr2;
-      CUDA_CHECK(cudaMalloc(&d_ptr2, size_));
-      CUDA_CHECK(cudaMemcpyAsync(d_ptr2, d_ptr_, size_, cudaMemcpyDeviceToDevice, ctx.streams[0]->get()));
-      cudaFree(d_ptr2);
+      CUDA_CHECK(cudaMemcpyAsync(d_buffer2_->get(), d_buffer_->get(), size_, cudaMemcpyDeviceToDevice, ctx.streams[0]->get()));
     }
   }
   ctx.streams[0]->sync();
@@ -119,21 +116,18 @@ BenchmarkResult MemcpyBandwidth::run_measure(BenchmarkContext& ctx, const std::m
 
     if (direction_ == Direction::HostToDevice) {
       if (use_async_) {
-        CUDA_CHECK(cudaMemcpyAsync(d_ptr_, h_ptr_, size_, cudaMemcpyHostToDevice, ctx.streams[0]->get()));
+        CUDA_CHECK(cudaMemcpyAsync(d_buffer_->get(), h_buffer_->get(), size_, cudaMemcpyHostToDevice, ctx.streams[0]->get()));
       } else {
-        CUDA_CHECK(cudaMemcpy(d_ptr_, h_ptr_, size_, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_buffer_->get(), h_buffer_->get(), size_, cudaMemcpyHostToDevice));
       }
     } else if (direction_ == Direction::DeviceToHost) {
       if (use_async_) {
-        CUDA_CHECK(cudaMemcpyAsync(h_ptr_, d_ptr_, size_, cudaMemcpyDeviceToHost, ctx.streams[0]->get()));
+        CUDA_CHECK(cudaMemcpyAsync(h_buffer_->get(), d_buffer_->get(), size_, cudaMemcpyDeviceToHost, ctx.streams[0]->get()));
       } else {
-        CUDA_CHECK(cudaMemcpy(h_ptr_, d_ptr_, size_, cudaMemcpyDeviceToHost));
+        CUDA_CHECK(cudaMemcpy(h_buffer_->get(), d_buffer_->get(), size_, cudaMemcpyDeviceToHost));
       }
     } else {
-      void* d_ptr2;
-      CUDA_CHECK(cudaMalloc(&d_ptr2, size_));
-      CUDA_CHECK(cudaMemcpyAsync(d_ptr2, d_ptr_, size_, cudaMemcpyDeviceToDevice, ctx.streams[0]->get()));
-      cudaFree(d_ptr2);
+      CUDA_CHECK(cudaMemcpyAsync(d_buffer2_->get(), d_buffer_->get(), size_, cudaMemcpyDeviceToDevice, ctx.streams[0]->get()));
     }
 
     timer.stop();
@@ -157,17 +151,32 @@ BenchmarkResult MemcpyBandwidth::run_measure(BenchmarkContext& ctx, const std::m
 }
 
 void MemcpyBandwidth::teardown(BenchmarkContext& ctx) {
-  if (d_ptr_) {
-    cudaFree(d_ptr_);
-    d_ptr_ = nullptr;
-  }
-
-  if (h_ptr_) {
-    free(h_ptr_);
-    h_ptr_ = nullptr;
-  }
-
+  d_buffer_.reset();
+  h_buffer_.reset();
+  d_buffer2_.reset();
   ctx.sync_all();
+}
+
+bool MemcpyBandwidth::verify_result(BenchmarkContext& ctx) {
+  const size_t verify_size = std::min(size_, size_t(1024 * 1024));
+  std::vector<uint8_t> src_pattern(verify_size);
+  std::vector<uint8_t> dst_pattern(verify_size);
+
+  std::memset(src_pattern.data(), 0xAA, verify_size);
+  std::memset(dst_pattern.data(), 0x55, verify_size);
+
+  void* d_verify = nullptr;
+  CUDA_CHECK(cudaMalloc(&d_verify, verify_size));
+
+  CUDA_CHECK(cudaMemcpy(d_verify, src_pattern.data(), verify_size, cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(dst_pattern.data(), d_verify, verify_size, cudaMemcpyDeviceToHost));
+
+  bool verified = (std::memcmp(src_pattern.data(), dst_pattern.data(), verify_size) == 0);
+
+  cudaFree(d_verify);
+  CUDA_CHECK_LAST();
+
+  return verified;
 }
 
 }

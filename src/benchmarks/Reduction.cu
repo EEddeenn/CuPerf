@@ -4,6 +4,8 @@
 #include "perfcli/cuda/Stream.hpp"
 #include "perfcli/core/Statistics.hpp"
 #include <format>
+#include <vector>
+#include <numeric>
 
 namespace perfcli {
 
@@ -186,6 +188,45 @@ void Reduction::teardown(BenchmarkContext& ctx) {
     d_result_ = nullptr;
   }
   ctx.sync_all();
+}
+
+bool Reduction::verify_result(BenchmarkContext& ctx) {
+  const size_t verify_n = 256;
+
+  std::vector<float> input_h(verify_n, 1.0f);
+  float expected = std::accumulate(input_h.begin(), input_h.end(), 0.0f);
+
+  float* d_verify_data = nullptr;
+  float* d_verify_partial = nullptr;
+  float* d_verify_result = nullptr;
+
+  CUDA_CHECK(cudaMalloc(&d_verify_data, verify_n * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&d_verify_partial, 1 * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&d_verify_result, sizeof(float)));
+
+  CUDA_CHECK(cudaMemcpy(d_verify_data, input_h.data(), verify_n * sizeof(float), cudaMemcpyHostToDevice));
+
+  int block_size = 256;
+  int grid_size = (verify_n + block_size * 2 - 1) / (block_size * 2);
+
+  reduction_kernel<<<grid_size, block_size, block_size * sizeof(float), ctx.streams[0]->get()>>>(
+      d_verify_data, d_verify_partial, verify_n);
+
+  final_reduction_kernel<<<1, block_size, block_size * sizeof(float), ctx.streams[0]->get()>>>(
+      d_verify_partial, d_verify_result, grid_size);
+
+  float result_h;
+  CUDA_CHECK(cudaMemcpy(&result_h, d_verify_result, sizeof(float), cudaMemcpyDeviceToHost));
+
+  const float epsilon = 1e-4f;
+  bool verified = (std::abs(result_h - expected) < epsilon);
+
+  cudaFree(d_verify_data);
+  cudaFree(d_verify_partial);
+  cudaFree(d_verify_result);
+  CUDA_CHECK_LAST();
+
+  return verified;
 }
 
 }

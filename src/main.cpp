@@ -15,6 +15,8 @@ int main(int argc, char* argv[]) {
         return Commands::execute_list(args);
       case Command::Run:
         return Commands::execute_run(args);
+      case Command::Selftest:
+        return Commands::execute_selftest(args);
       case Command::Help:
         return 0;
     }

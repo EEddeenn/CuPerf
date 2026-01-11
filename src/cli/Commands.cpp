@@ -319,4 +319,55 @@ void Commands::save_results_csv(const std::vector<BenchmarkResult>& results,
   }
 }
 
+int Commands::execute_selftest(const Args& args) {
+  std::cout << "=== Running smoke tests ===\n\n";
+
+  RunConfig config;
+  config.device_index = 0;
+  config.verify_results = true;
+  config.warmup_iterations = 2;
+  config.measured_iterations = 5;
+
+  RunPlan plan;
+  std::map<std::string, std::string> params;
+
+  params["size"] = "1K";
+  params["dtype"] = "fp32";
+  params["direction"] = "H2D";
+  params["pinned"] = "off";
+  params["async"] = "off";
+  plan.add_case("memcpy", params);
+
+  params["size"] = "1K";
+  params["pattern"] = "read_write";
+  plan.add_case("device_mem", params);
+
+  params["size"] = "1K";
+  params["iters"] = "10";
+  plan.add_case("compute", params);
+
+  params["size"] = "1K";
+  plan.add_case("reduction", params);
+
+  params["block_size"] = "256";
+  plan.add_case("kernel_launch", params);
+
+  Runner runner(config);
+  auto results = runner.execute_plan(plan);
+
+  print_results(results);
+
+  bool all_passed = std::all_of(results.begin(), results.end(),
+                                   [](const BenchmarkResult& r) { return r.success; });
+
+  std::cout << "\n=== Test Summary ===\n";
+  if (all_passed) {
+    std::cout << "✓ All smoke tests passed\n";
+  } else {
+    std::cout << "✗ Some smoke tests failed\n";
+  }
+
+  return all_passed ? 0 : 1;
+}
+
 }

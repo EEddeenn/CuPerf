@@ -3,6 +3,7 @@
 #include <cuda_runtime.h>
 #include <stdexcept>
 #include <cstddef>
+#include "perfcli/util/Error.hpp"
 
 namespace perfcli {
 

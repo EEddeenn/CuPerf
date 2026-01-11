@@ -11,6 +11,7 @@ public:
   void setup(BenchmarkContext& ctx, const std::map<std::string, std::string>& params) override;
   void run_warmup(BenchmarkContext& ctx, const std::map<std::string, std::string>& params) override;
   BenchmarkResult run_measure(BenchmarkContext& ctx, const std::map<std::string, std::string>& params) override;
+  bool verify_result(BenchmarkContext& ctx) override;
   void teardown(BenchmarkContext& ctx) override;
 
 private:

@@ -31,6 +31,7 @@ public:
   virtual void setup(BenchmarkContext& ctx, const std::map<std::string, std::string>& params) = 0;
   virtual void run_warmup(BenchmarkContext& ctx, const std::map<std::string, std::string>& params) = 0;
   virtual BenchmarkResult run_measure(BenchmarkContext& ctx, const std::map<std::string, std::string>& params) = 0;
+  virtual bool verify_result(BenchmarkContext& ctx);
   virtual void teardown(BenchmarkContext& ctx) = 0;
 };
 

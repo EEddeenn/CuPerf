@@ -4,6 +4,9 @@
 #include "perfcli/cuda/Stream.hpp"
 #include "perfcli/core/Statistics.hpp"
 #include <format>
+#include <vector>
+#include <cmath>
+#include <algorithm>
 
 namespace perfcli {
 
@@ -138,6 +141,43 @@ void ComputeThroughput::teardown(BenchmarkContext& ctx) {
     d_data_ = nullptr;
   }
   ctx.sync_all();
+}
+
+bool ComputeThroughput::verify_result(BenchmarkContext& ctx) {
+  const size_t verify_size = 256 * sizeof(float);
+  const size_t n = verify_size / sizeof(float);
+
+  std::vector<float> input_h(n, 1.0f);
+  std::vector<float> output_h(n);
+
+  float* d_verify = nullptr;
+  CUDA_CHECK(cudaMalloc(&d_verify, verify_size));
+  CUDA_CHECK(cudaMemcpy(d_verify, input_h.data(), verify_size, cudaMemcpyHostToDevice));
+
+  int block_size = 256;
+  int grid_size = (n + block_size - 1) / block_size;
+  fma_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+      d_verify, n, 10);
+
+  CUDA_CHECK(cudaMemcpy(output_h.data(), d_verify, verify_size, cudaMemcpyDeviceToHost));
+
+  float expected = 1.0f;
+  for (int i = 0; i < 10; ++i) {
+    expected = __builtin_fmaf(expected, 1.0001f, 0.0001f);
+  }
+
+  const float epsilon = 1e-4f;
+  bool verified = true;
+  for (size_t i = 0; i < n && verified; ++i) {
+    if (std::abs(output_h[i] - expected) > epsilon) {
+      verified = false;
+    }
+  }
+
+  cudaFree(d_verify);
+  CUDA_CHECK_LAST();
+
+  return verified;
 }
 
 }

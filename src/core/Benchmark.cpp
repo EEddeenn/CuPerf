@@ -15,6 +15,10 @@ bool Benchmark::is_supported(const GpuInfo& gpu) const {
   return true;
 }
 
+bool Benchmark::verify_result(BenchmarkContext& ctx) {
+  return true;
+}
+
 BenchmarkRegistry& BenchmarkRegistry::instance() {
   static BenchmarkRegistry instance;
   return instance;
