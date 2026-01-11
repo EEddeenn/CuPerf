@@ -19,21 +19,27 @@ struct GpuInfo {
   int pci_bus_id;
   int pci_device_id;
 
-  int major_version() const;
-  int minor_version() const;
+  [[nodiscard]] int major_version() const;
+  [[nodiscard]] int minor_version() const;
+
+  [[nodiscard]] bool supports_warp_shuffle() const;
+  [[nodiscard]] bool supports_tensor_cores() const;
+  [[nodiscard]] bool supports_fp16_tensor_cores() const;
+  [[nodiscard]] bool supports_bf16_tensor_cores() const;
+  [[nodiscard]] bool is_compute_capability_at_least(int major, int minor) const;
 };
 
 class DeviceManager {
 public:
   static DeviceManager& instance();
 
-  int device_count() const;
-  std::vector<GpuInfo> enumerate_devices() const;
-  GpuInfo get_device_info(int device_index) const;
+  [[nodiscard]] int device_count() const;
+  [[nodiscard]] std::vector<GpuInfo> enumerate_devices() const;
+  [[nodiscard]] GpuInfo get_device_info(int device_index) const;
   void set_device(int device_index) const;
 
-  std::optional<int> find_device_by_index(int index) const;
-  std::optional<int> find_device_by_uuid(const std::string& uuid) const;
+  [[nodiscard]] std::optional<int> find_device_by_index(int index) const;
+  [[nodiscard]] std::optional<int> find_device_by_uuid(const std::string& uuid) const;
 
 private:
   DeviceManager();

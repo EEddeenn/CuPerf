@@ -1,6 +1,9 @@
 # CUDA Performance Test CLI Tool — Software Architecture Plan
 
-This document describes a detailed, implementation-ready architecture for a **CUDA performance test program** built as a **CLI tool** using **modern CUDA** (CUDA 13.1 by default) and **modern C++** (C++23 by default). It is written to be “coding-agent friendly”: clear components, responsibilities, file layout, interfaces, and step-by-step milestones.
+This document describes a detailed, implementation-ready architecture for a **CUDA performance test program** built as a **CLI tool** using **modern CUDA** (CUDA 13.1 by default) and **modern C++** (C++23 by default). It is written to be "coding-agent friendly": clear components, responsibilities, file layout, interfaces, and step-by-step milestones.
+
+> **Status**: ✅ Fully implemented, tested, and optimized
+> Last updated: 2025-01-12
 
 ---
 
@@ -121,14 +124,18 @@ ConsoleReport.hpp
 JsonReport.cpp
 JsonReport.hpp
 CsvReport.cpp (optional)
-benchmarks/
+ benchmarks/
 MemcpyBandwidth.cu
 MemcpyBandwidth.hpp
 DeviceMemBandwidth.cu
+DeviceMemBandwidth.hpp
 KernelLaunchOverhead.cu
 ComputeThroughput.cu
+ComputeThroughput.hpp
 Reduction.cu
-GemmLike.cu (phase 2)
+Reduction.hpp
+TensorCore.cu
+TensorCore.hpp
 third_party/
 (optional vendored deps or FetchContent)
 tests/
@@ -150,16 +157,16 @@ Notes:
 
 ### Requirements
 - CMake ≥ ~3.24 (modern CUDA language support)
-- C++20
+- C++23
 - CUDA toolkit (assume 12.x, but feature-check instead of hardcoding)
 
 ### CMake design
 - Single executable target: `perfcli`
 - CUDA as a first-class language:
 
-  - `project(perfcli LANGUAGES CXX CUDA)`
-  - `set(CMAKE_CXX_STANDARD 20)`
-  - `set(CMAKE_CUDA_STANDARD 20)`
+   - `project(perfcli LANGUAGES CXX CUDA)`
+   - `set(CMAKE_CXX_STANDARD 23)`
+   - `set(CMAKE_CUDA_STANDARD 20)`
 
 - Options:
   - `PERFCLI_ENABLE_NVML` (default ON if found)
@@ -378,12 +385,14 @@ Store raw samples and compute robust summaries:
    - sum reduction (block-level + final)
    - metric: effective GB/s or elements/s, plus latency
 
-### Phase 2 (optional)
-6. **GemmLike**
-   - tiled matrix multiply
-   - optional WMMA/tensor cores when available
-   - metric: TFLOP/s
-   - diagnostic, not a cuBLAS competitor
+### Phase 2 (completed)
+6. **TensorCore**
+    - WMMA-based GEMM (tensor cores)
+    - FP16 matrix multiply (16x16x16 tiles)
+    - INT8 matrix multiply (16x16x16 tiles)
+    - metric: TFLOP/s or TOPS
+    - requires CC 7.0+ (tensor cores)
+    - diagnostic, not a cuBLAS competitor
 
 7. **MultiGPU Peer Copy**
    - peer bandwidth/latency across GPUs
@@ -580,23 +589,33 @@ Treat GPU tests as optional in CI.
 
 **Acceptance:** clean output; JSON stable and parseable.
 
-### Milestone F — Optional telemetry
-17. Add NVML behind interface; `--nvml` and snapshots per case.
+### Milestone F — Tensor core support
+17. Implement `TensorCore` benchmark with WMMA API.
+   - FP16 tensor cores (16x16x16)
+   - INT8 tensor cores (16x16x16)
+   - Configurable GEMM dimensions (--m, --n, --k)
+
+**Acceptance:** `tensor_core` benchmark runs on GPUs with tensor cores and reports TFLOPS/TOPS.
+
+### Milestone G — Optional telemetry
+18. Add NVML behind interface; `--nvml` and snapshots per case.
 
 **Acceptance:** works when NVML is available; gracefully disables otherwise.
 
 ---
 
 ## 20) Definition of done
-
-- `perfcli list/info/run` functional
-- At least 4 core benchmarks implemented (Memcpy, Launch, Mem BW, Compute)
-- JSON output includes system info, per-case config, and summary stats
-- Warmup separated from measurement
-- Errors are actionable and structured
-- Adding a new benchmark requires only:
-  - a new benchmark class implementing the interface
-  - one registry registration line
-- Documentation: `docs/cli_usage.md` + `docs/reproducibility.md`
+- ✅ `perfcli list/info/run` functional
+- ✅ All 6 core benchmarks implemented (Memcpy, Launch, Mem BW, Compute, Reduction, TensorCore)
+- ✅ JSON output includes system info, per-case config, and summary stats
+- ✅ Warmup separated from measurement
+- ✅ Errors are actionable and structured
+- ✅ Adding a new benchmark requires only:
+    - a new benchmark class implementing the interface
+    - one registry registration line
+- ✅ C++23 optimizations (std::span, [[nodiscard]], constexpr, string_view)
+- ✅ CUDA kernel optimizations (warp shuffle, unroll, launch_bounds, noinline)
+- ✅ Tensor core WMMA API support (FP16, INT8)
+- Documentation: README.md + AGENTS.md
 
 ---

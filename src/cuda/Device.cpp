@@ -2,6 +2,7 @@
 #include "perfcli/util/Error.hpp"
 #include <sstream>
 #include <iomanip>
+#include <string_view>
 
 namespace perfcli {
 
@@ -19,6 +20,30 @@ int GpuInfo::minor_version() const {
     return std::stoi(compute_capability.substr(dot_pos + 1));
   }
   return 0;
+}
+
+bool GpuInfo::is_compute_capability_at_least(int major, int minor) const {
+  int major_ver = major_version();
+  int minor_ver = minor_version();
+  if (major_ver > major) return true;
+  if (major_ver < major) return false;
+  return minor_ver >= minor;
+}
+
+bool GpuInfo::supports_warp_shuffle() const {
+  return is_compute_capability_at_least(3, 0);
+}
+
+bool GpuInfo::supports_tensor_cores() const {
+  return is_compute_capability_at_least(7, 0);
+}
+
+bool GpuInfo::supports_fp16_tensor_cores() const {
+  return is_compute_capability_at_least(7, 0);
+}
+
+bool GpuInfo::supports_bf16_tensor_cores() const {
+  return is_compute_capability_at_least(8, 0);
 }
 
 DeviceManager& DeviceManager::instance() {
@@ -40,6 +65,7 @@ int DeviceManager::device_count() const {
 std::vector<GpuInfo> DeviceManager::enumerate_devices() const {
   std::vector<GpuInfo> devices;
   int count = device_count();
+  devices.reserve(count);
 
   for (int i = 0; i < count; ++i) {
     try {
@@ -100,9 +126,10 @@ std::optional<int> DeviceManager::find_device_by_index(int index) const {
 }
 
 std::optional<int> DeviceManager::find_device_by_uuid(const std::string& uuid) const {
+  const std::string_view uuid_view(uuid);
   auto devices = enumerate_devices();
   for (const auto& device : devices) {
-    if (device.uuid == uuid) {
+    if (std::string_view(device.uuid) == uuid_view) {
       return device.device_index;
     }
   }

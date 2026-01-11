@@ -6,7 +6,7 @@
 
 namespace perfcli {
 
-__global__ void empty_kernel() {
+__global__ void __noinline__ empty_kernel() {
 }
 
 BenchmarkSpec KernelLaunchOverhead::metadata() const {
@@ -51,6 +51,7 @@ BenchmarkResult KernelLaunchOverhead::run_measure(BenchmarkContext& ctx, const s
 
   EventTimer timer(ctx.streams[0]->get());
   std::vector<double> samples_us;
+  samples_us.reserve(iters);
 
   for (int i = 0; i < iters; ++i) {
     timer.start();

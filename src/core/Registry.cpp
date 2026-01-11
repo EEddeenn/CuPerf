@@ -4,6 +4,7 @@
 #include "perfcli/benchmarks/DeviceMemBandwidth.hpp"
 #include "perfcli/benchmarks/ComputeThroughput.hpp"
 #include "perfcli/benchmarks/Reduction.hpp"
+#include "perfcli/benchmarks/TensorCore.hpp"
 
 using namespace perfcli;
 
@@ -22,4 +23,7 @@ namespace {
 
   BenchmarkRegistrar reg_reduction(
       "reduction", []() { return std::make_unique<Reduction>(); });
+
+  BenchmarkRegistrar reg_tensor_core(
+      "tensor_core", []() { return std::make_unique<TensorCore>(); });
 }

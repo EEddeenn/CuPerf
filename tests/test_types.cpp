@@ -4,28 +4,28 @@
 
 TEST(DataType, SizeAndStringConversion) {
   EXPECT_EQ(perfcli::data_type_size(perfcli::DataType::Float32), sizeof(float));
-  EXPECT_EQ(perfcli::data_type_size(perfcli::Float16), 2);
-  EXPECT_EQ(perfcli::data_type_size(perfcli::BFloat16), 2);
-  EXPECT_EQ(perfcli::data_type_size(perfcli::Int8), 1);
-  EXPECT_EQ(perfcli::data_type_size(perfcli::Int32), sizeof(int32_t));
+  EXPECT_EQ(perfcli::data_type_size(perfcli::DataType::Float16), 2);
+  EXPECT_EQ(perfcli::data_type_size(perfcli::DataType::BFloat16), 2);
+  EXPECT_EQ(perfcli::data_type_size(perfcli::DataType::Int8), 1);
+  EXPECT_EQ(perfcli::data_type_size(perfcli::DataType::Int32), sizeof(int32_t));
 
   EXPECT_EQ(perfcli::data_type_to_string(perfcli::DataType::Float32), "fp32");
-  EXPECT_EQ(perfcli::data_type_to_string(perfcli::Float16), "fp16");
-  EXPECT_EQ(perfcli::data_type_to_string(perfcli::BFloat16), "bf16");
-  EXPECT_EQ(perfcli::data_type_to_string(perfcli::Int8), "int8");
-  EXPECT_EQ(perfcli::data_type_to_string(perfcli::Int32), "int32");
+  EXPECT_EQ(perfcli::data_type_to_string(perfcli::DataType::Float16), "fp16");
+  EXPECT_EQ(perfcli::data_type_to_string(perfcli::DataType::BFloat16), "bf16");
+  EXPECT_EQ(perfcli::data_type_to_string(perfcli::DataType::Int8), "int8");
+  EXPECT_EQ(perfcli::data_type_to_string(perfcli::DataType::Int32), "int32");
 
   EXPECT_EQ(perfcli::string_to_data_type("fp32"), perfcli::DataType::Float32);
-  EXPECT_EQ(perfcli::string_to_data_type("fp16"), perfcli::Float16);
-  EXPECT_EQ(perfcli::string_to_data_type("bf16"), perfcli::BFloat16);
-  EXPECT_EQ(perfcli::string_to_data_type("int8"), perfcli::Int8);
-  EXPECT_EQ(perfcli::string_to_data_type("int32"), perfcli::Int32);
+  EXPECT_EQ(perfcli::string_to_data_type("fp16"), perfcli::DataType::Float16);
+  EXPECT_EQ(perfcli::string_to_data_type("bf16"), perfcli::DataType::BFloat16);
+  EXPECT_EQ(perfcli::string_to_data_type("int8"), perfcli::DataType::Int8);
+  EXPECT_EQ(perfcli::string_to_data_type("int32"), perfcli::DataType::Int32);
 }
 
 TEST(Direction, StringConversion) {
   EXPECT_EQ(perfcli::direction_to_string(perfcli::Direction::HostToDevice), "H2D");
-  EXPECT_EQ(perfcli::direction_to_string(perfcli::DeviceToHost), "D2H");
-  EXPECT_EQ(perfcli::direction_to_string(perfcli::DeviceToDevice), "D2D");
+  EXPECT_EQ(perfcli::direction_to_string(perfcli::Direction::DeviceToHost), "D2H");
+  EXPECT_EQ(perfcli::direction_to_string(perfcli::Direction::DeviceToDevice), "D2D");
 }
 
 TEST(BenchmarkResult, DefaultConstruction) {

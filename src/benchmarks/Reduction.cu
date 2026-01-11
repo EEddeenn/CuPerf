@@ -9,46 +9,65 @@
 
 namespace perfcli {
 
-__global__ void reduction_kernel(const float* __restrict__ data, float* __restrict__ partial_sums, size_t n) {
+inline __device__ float warp_reduce_sum(float val) {
+  constexpr unsigned int full_mask = 0xffffffff;
+  val += __shfl_down_sync(full_mask, val, 16);
+  val += __shfl_down_sync(full_mask, val, 8);
+  val += __shfl_down_sync(full_mask, val, 4);
+  val += __shfl_down_sync(full_mask, val, 2);
+  val += __shfl_down_sync(full_mask, val, 1);
+  return val;
+}
+
+__global__ void __launch_bounds__(512, 2) reduction_kernel(const float* __restrict__ data, float* __restrict__ partial_sums, size_t n) {
   extern __shared__ float s_data[];
 
-  size_t tid = threadIdx.x;
-  size_t idx = blockIdx.x * (blockDim.x * 2) + tid;
+  const size_t tid = threadIdx.x;
+  const size_t idx = blockIdx.x * (blockDim.x * 2) + tid;
 
-  s_data[tid] = (idx < n) ? data[idx] : 0.0f;
-  if (idx + blockDim.x < n) {
-    s_data[tid] += data[idx + blockDim.x];
-  }
+  float sum = 0.0f;
+  if (idx < n) sum += data[idx];
+  if (idx + blockDim.x < n) sum += data[idx + blockDim.x];
+
+  s_data[tid] = sum;
   __syncthreads();
 
-  for (size_t s = blockDim.x / 2; s > 0; s >>= 1) {
+#pragma unroll
+  for (unsigned int s = blockDim.x / 2; s >= 32; s >>= 1) {
     if (tid < s) {
       s_data[tid] += s_data[tid + s];
     }
     __syncthreads();
   }
 
-  if (tid == 0) {
-    partial_sums[blockIdx.x] = s_data[0];
+  if (tid < 32) {
+    float warp_sum = warp_reduce_sum(s_data[tid]);
+    if (tid == 0) {
+      partial_sums[blockIdx.x] = warp_sum;
+    }
   }
 }
 
-__global__ void final_reduction_kernel(float* __restrict__ partial_sums, float* result, size_t n) {
-  size_t idx = threadIdx.x;
+__global__ void __launch_bounds__(512, 2) final_reduction_kernel(float* __restrict__ partial_sums, float* result, size_t n) {
+  const size_t tid = threadIdx.x;
   extern __shared__ float s_data[];
 
-  s_data[idx] = (idx < n) ? partial_sums[idx] : 0.0f;
+  s_data[tid] = (tid < n) ? partial_sums[tid] : 0.0f;
   __syncthreads();
 
-  for (size_t s = blockDim.x / 2; s > 0; s >>= 1) {
-    if (idx < s) {
-      s_data[idx] += s_data[idx + s];
+#pragma unroll
+  for (unsigned int s = blockDim.x / 2; s >= 32; s >>= 1) {
+    if (tid < s) {
+      s_data[tid] += s_data[tid + s];
     }
     __syncthreads();
   }
 
-  if (idx == 0) {
-    *result = s_data[0];
+  if (tid < 32) {
+    float warp_sum = warp_reduce_sum(s_data[tid]);
+    if (tid == 0) {
+      *result = warp_sum;
+    }
   }
 }
 
@@ -99,7 +118,7 @@ void Reduction::setup(BenchmarkContext& ctx, const std::map<std::string, std::st
   CUDA_CHECK(cudaMalloc(&d_data_, size_));
   CUDA_CHECK(cudaMemset(d_data_, 1, size_));
 
-  int block_size = 512;
+  constexpr int block_size = 512;
   int grid_size = (num_elements_ + block_size * 2 - 1) / (block_size * 2);
 
   CUDA_CHECK(cudaMalloc(&d_partial_sums_, grid_size * sizeof(float)));
@@ -107,7 +126,7 @@ void Reduction::setup(BenchmarkContext& ctx, const std::map<std::string, std::st
 }
 
 void Reduction::run_warmup(BenchmarkContext& ctx, const std::map<std::string, std::string>& params) {
-  int block_size = 512;
+  constexpr int block_size = 512;
   int grid_size = (num_elements_ + block_size * 2 - 1) / (block_size * 2);
 
   for (int i = 0; i < 5; ++i) {

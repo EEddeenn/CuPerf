@@ -17,8 +17,8 @@ public:
   Stream(Stream&& other) noexcept;
   Stream& operator=(Stream&& other) noexcept;
 
-  cudaStream_t get() const noexcept { return stream_; }
-  bool is_external() const noexcept { return is_external_; }
+  [[nodiscard]] cudaStream_t get() const noexcept { return stream_; }
+  [[nodiscard]] bool is_external() const noexcept { return is_external_; }
 
   void sync() const;
 
@@ -30,7 +30,7 @@ private:
 class Event {
 public:
   Event();
-  Event(unsigned int flags);
+  explicit Event(unsigned int flags);
   ~Event();
 
   Event(const Event&) = delete;
@@ -38,11 +38,11 @@ public:
   Event(Event&& other) noexcept;
   Event& operator=(Event&& other) noexcept;
 
-  cudaEvent_t get() const noexcept { return event_; }
+  [[nodiscard]] cudaEvent_t get() const noexcept { return event_; }
 
   void record(cudaStream_t stream) const;
   void sync() const;
-  float elapsed_time_ms(const Event& start) const;
+  [[nodiscard]] float elapsed_time_ms(const Event& start) const;
 
 private:
   cudaEvent_t event_;
@@ -56,8 +56,8 @@ public:
   void start();
   void stop();
   void sync();
-  float elapsed_milliseconds() const;
-  float elapsed_microseconds() const;
+  [[nodiscard]] float elapsed_milliseconds() const;
+  [[nodiscard]] float elapsed_microseconds() const;
 
 private:
   cudaStream_t stream_;
@@ -69,6 +69,6 @@ private:
 
 using StreamPtr = std::unique_ptr<Stream>;
 
-std::vector<StreamPtr> create_streams(int count);
+[[nodiscard]] std::vector<StreamPtr> create_streams(int count);
 
 }

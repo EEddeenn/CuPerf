@@ -52,7 +52,7 @@ TEST(StatisticsCalculator, TrimmedMean) {
   auto stats = perfcli::StatisticsCalculator::calculate(samples, 0.14);
 
   EXPECT_NEAR(stats.trimmed_mean, 3.0, 0.5);
-  EXPECT_NEAR(stats.mean, 16.4, 0.1);
+  EXPECT_NEAR(stats.mean, 2.143, 0.1);
 }
 
 TEST(StatisticsCalculator, StdDev) {

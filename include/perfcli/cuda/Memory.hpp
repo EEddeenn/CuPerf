@@ -48,10 +48,10 @@ public:
     }
   }
 
-  T* get() const noexcept { return static_cast<T*>(data_); }
-  size_t size_bytes() const noexcept { return size_; }
-  size_t count() const noexcept { return size_ / sizeof(T); }
-  bool is_empty() const noexcept { return data_ == nullptr; }
+  [[nodiscard]] T* get() const noexcept { return static_cast<T*>(data_); }
+  [[nodiscard]] size_t size_bytes() const noexcept { return size_; }
+  [[nodiscard]] size_t count() const noexcept { return size_ / sizeof(T); }
+  [[nodiscard]] bool is_empty() const noexcept { return data_ == nullptr; }
 
   void memset(int value) {
     if (data_) {
@@ -126,11 +126,11 @@ public:
     }
   }
 
-  T* get() const noexcept { return static_cast<T*>(data_); }
-  size_t size_bytes() const noexcept { return size_; }
-  size_t count() const noexcept { return size_ / sizeof(T); }
-  bool is_empty() const noexcept { return data_ == nullptr; }
-  HostMemoryType type() const noexcept { return type_; }
+  [[nodiscard]] T* get() const noexcept { return static_cast<T*>(data_); }
+  [[nodiscard]] size_t size_bytes() const noexcept { return size_; }
+  [[nodiscard]] size_t count() const noexcept { return size_ / sizeof(T); }
+  [[nodiscard]] bool is_empty() const noexcept { return data_ == nullptr; }
+  [[nodiscard]] HostMemoryType type() const noexcept { return type_; }
 
 private:
   void* data_;

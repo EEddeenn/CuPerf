@@ -20,6 +20,8 @@ _deps/
 *.i*86
 *.x86_64
 *.hex
+bin/
+lib/
 
 # Object files
 *.o
@@ -49,6 +51,42 @@ results.json
 results.csv
 *.log
 
+# Benchmark data
+benchmarks*.json
+benchmarks*.csv
+perfcli_results*.json
+perfcli_results*.csv
+
+# Profiling
+*.nvvp
+*.qdstrm
+*.qdrep
+*.sqlite
+
 # Package manager
 package-lock.json
 yarn.lock
+
+# Build artifacts on Windows
+*.obj
+*.lib
+*.exp
+*.pdb
+
+# IDE files
+.vs/
+*.user
+*.suo
+
+# Test output
+test_output/
+benchmark_results/
+
+# Profiling output
+nsight-profiles/
+*.nsys-rep
+
+# Coverage
+*.gcda
+*.gcno
+coverage/

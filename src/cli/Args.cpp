@@ -64,6 +64,12 @@ Args Args::parse(int argc, char* argv[]) {
   std::string size_range;
   run_cmd->add_option("--sizes-range", size_range, "Size range (e.g., 1K:1G:2x for geometric progression)");
 
+  std::string m_str, n_str, k_str, gemm_iters_str;
+  run_cmd->add_option("--m", m_str, "GEMM M dimension (tensor_core)");
+  run_cmd->add_option("--n", n_str, "GEMM N dimension (tensor_core)");
+  run_cmd->add_option("--k", k_str, "GEMM K dimension (tensor_core)");
+  run_cmd->add_option("--gemm-iters", gemm_iters_str, "GEMM iterations per kernel launch (tensor_core)");
+
   run_cmd->add_option("benchmarks", args.benchmarks_, "Benchmark names to run (all if not specified)");
 
   try {
@@ -76,6 +82,10 @@ Args Args::parse(int argc, char* argv[]) {
   if (app.got_subcommand("run")) {
     config.extra_params["dtype"] = dtype_str;
     config.extra_params["direction"] = direction_str;
+    if (!m_str.empty()) config.extra_params["m"] = m_str;
+    if (!n_str.empty()) config.extra_params["n"] = n_str;
+    if (!k_str.empty()) config.extra_params["k"] = k_str;
+    if (!gemm_iters_str.empty()) config.extra_params["gemm_iters"] = gemm_iters_str;
 
     if (!size_list.empty()) {
       config.extra_params["sizes"] = "";

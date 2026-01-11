@@ -1,10 +1,8 @@
 # Agent Guidelines for Kuda (CUDA Performance CLI Tool)
 
-This file provides coding agents with essential information to work effectively in this repository.
-
 ## Build System
 
-This project uses CMake with C++20 and modern CUDA (targeting CUDA 13.1/12.x).
+CMake with C++23 and CUDA 13.1/12.x. Supports compute capabilities: 75, 80, 86, 89, 90, 120.
 
 ### Essential Commands
 
@@ -17,25 +15,24 @@ cmake --build build --parallel $(nproc)
 cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug
 cmake --build build-debug --parallel $(nproc)
 
-# Clean
-rm -rf build build-debug
+# Build with tests
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DPERFCLI_ENABLE_TESTS=ON
+cmake --build build --parallel $(nproc)
+ctest --test-dir build -R <test_name> -V    # Run single test
+ctest --test-dir build -V                   # Run all tests
 
-# Run the CLI
-./build/perfcli --help
-./build/perfcli info
-./build/perfcli list
-./build/perfcli run memcpy --sizes-range 1M:8G:2x --json results.json
-
-# Run single test (when tests exist)
-ctest --test-dir build -R <test_name> -V
+# Run CLI
+./build/bin/perfcli --help
+./build/bin/perfcli run memcpy --sizes-range 1M:8G:2x --json results.json
 ```
 
 ### CMake Options
 
-- `PERFCLI_ENABLE_NVML` (default: auto-detect)
+- `PERFCLI_ENABLE_NVML` (default: ON)
 - `PERFCLI_ENABLE_CUPTI` (default: OFF)
 - `PERFCLI_ENABLE_CSV` (default: OFF)
-- `PERFCLI_ENABLE_STATIC` (optional)
+- `PERFCLI_ENABLE_TESTS` (default: OFF)
+- `PERFCLI_ENABLE_STATIC` (default: OFF)
 
 ## Code Style Guidelines
 
@@ -72,93 +69,82 @@ ctest --test-dir build -R <test_name> -V
 - No space between function name and opening paren: `function(args)`
 - Spaces around binary operators: `a + b`, `a == b`
 - No spaces inside parentheses: `(a, b)`, not `( a, b )`
+- Use `[[nodiscard]]` on all functions returning values that must not be ignored (getters, factories, etc.)
 
 ### Type System
 
-- Use strong types over primitives where semantics matter (e.g., `DeviceIndex` instead of `int`)
-- Prefer `std::chrono` for timing instead of raw integers
-- Use `std::optional` for nullable values, not raw pointers
-- Use `std::expected` (C++23) or error codes for recoverable errors
-- Use `std::span` for array views (C++20)
-- Avoid `auto` where the type is not obvious
+Use strong types over primitives (`DeviceIndex` vs `int`). Prefer `std::chrono` for timing, `std::optional` for nullables, `std::expected` (C++23) for errors, `std::span` for array views, `std::format` for string formatting. Use `auto` when type is obvious from context; prefer explicit types otherwise.
 
 ### Memory Management
 
-- Use RAII for all resources
-- `DeviceBuffer<T>` wrapper for `cudaMalloc`/`cudaFree`
-- `HostBuffer<T>` wrapper for host memory (pageable or pinned)
-- Never use raw `new`/`delete`; prefer `std::make_unique`/`std::make_shared`
-- Follow rule of five/five-zero for resource-managing classes
+RAII for all resources. `DeviceBuffer<T>` for device memory, `HostBuffer<T>` for host memory (pageable or pinned). Use `std::make_unique`/`std::make_shared`, never raw `new`/`delete`. Follow rule of five for resource-managing classes.
 
 ### CUDA-Specific Guidelines
 
-- Always check CUDA errors: `CUDA_CHECK(call)` macro throws `CudaError`
-- Use CUDA events for GPU timing, not `cudaDeviceSynchronize()` in inner loops
-- Timing pattern: record start → enqueue → record stop → `cudaEventSynchronize(stop)`
-- Record `cudaGetLastError()` after kernel launches
-- Don't include allocation time in measurements unless explicitly testing alloc performance
-- Don't create streams/events in inner loops
-- Prefer `cudaMemcpyAsync` with pinned memory for async copies
+Always `CUDA_CHECK(call)` - throws `CudaError`. Use `EventTimer` for timing: `timer.start()` → enqueue → `timer.stop()` → `timer.sync()` → `timer.elapsed_microseconds()`. Avoid `cudaDeviceSynchronize()` in inner loops. Call `cudaGetLastError()` after kernel launches. Don't measure allocation time or create streams/events in inner loops.
+
+### CUDA Optimization for Modern GPUs (RTX 5090, Compute 12.0+)
+
+- Use `__launch_bounds__(threads, minBlocks)` for register optimization
+- Use vectorized loads/stores (`float4`, `half2`, `float4*`) for memory bandwidth
+- Use `__restrict__` on pointer parameters to enable compiler optimizations
+- Use `constexpr` for compile-time constants
+- Use `#pragma unroll` for small, fixed-count loops
+- Use warp shuffle instructions (`__shfl_down_sync`) for intra-warp communication instead of shared memory
+- Use `__shfl_down_sync` with full mask `0xffffffff` for known active lanes
+- Use `__syncthreads()` carefully; avoid when warp shuffle suffices
+- Use `inline` on small device functions
+- Use `__noinline__` to prevent unwanted inlining of empty kernels
+- Check compute capability with `gpu.is_compute_capability_at_least()` for feature gating
+- Use `__builtin_assume_aligned` when alignment is guaranteed
+- Consider tensor cores (WMMA API) for FP16/BF16 matrix operations on compute 7.0+
+- Use `const` and `const&` where appropriate to help compiler optimization
 
 ### Error Handling
 
-- CUDA errors: Use `CUDA_CHECK(call)` macro with file/line info
-- Throw exceptions (`std::runtime_error`, `CudaError`) for unrecoverable errors
-- Return `std::expected` or error codes for recoverable failures
-- Benchmark failures: Record in results, exit non-zero
-- Never swallow errors silently
+CUDA errors: `CUDA_CHECK(call)` macro. Throw `std::runtime_error`/`CudaError` for unrecoverable errors. Return `std::expected` for recoverable failures. Benchmark failures: record in results, exit non-zero. Never swallow errors silently.
 
 ### Benchmark Interface
 
-Every benchmark must implement:
-- `metadata()` → BenchmarkSpec (name, description, parameters)
-- `is_supported(device)` → validate device capabilities
-- `setup(ctx, params)` → allocate resources
-- `run_warmup(ctx, params)` → warmup iterations
-- `run_measure(ctx, params)` → return sample timings + metrics
-- `teardown(ctx)` → cleanup
+Every benchmark implements: `metadata()`, `is_supported(device)`, `setup(ctx, params)`, `run_warmup(ctx, params)`, `run_measure(ctx, params)` → samples + metrics, `teardown(ctx)`.
+
+### GPU Feature Detection
+
+Use `GpuInfo` methods to detect GPU capabilities for feature gating:
+- `gpu.is_compute_capability_at_least(major, minor)` - check CC version
+- `gpu.supports_warp_shuffle()` - CC 3.0+
+- `gpu.supports_tensor_cores()` - CC 7.0+
+- `gpu.supports_fp16_tensor_cores()` - CC 7.0+
+- `gpu.supports_bf16_tensor_cores()` - CC 8.0+
 
 ### Testing
 
-- Use Google Test for unit tests (when added)
-- Test filename pattern: `test_*.cpp`
-- Run single test: `ctest -R <test_name> -V`
-- Smoke test: `perfcli selftest` (to be implemented)
+Google Test. Test files: `test_*.cpp`. Run single test: `ctest --test-dir build -R <test_name> -V`. Tests require `-DPERFCLI_ENABLE_TESTS=ON`. Use `TEST(SuiteName, TestName)` macros and `EXPECT_*`/`ASSERT_*` assertions.
 
 ### Performance Considerations
 
-- Always warm up before measuring (amortize context/JIT/cache effects)
-- Gather multiple samples; compute robust stats (median, p95, trimmed mean)
-- Ensure workloads are large enough to avoid measuring overhead
-- Document any trade-offs between accuracy and performance
+Always warm up (amortize JIT/cache). Gather multiple samples; compute robust stats (median, p95, trimmed mean). Ensure workloads large enough to avoid measuring overhead.
+
+### Linting/Formatting
+
+No formal linting configured. Follow the style guidelines above. Ensure code compiles with `-Wall -Wextra` for warnings.
 
 ### Adding New Benchmarks
 
-To add a benchmark:
-1. Create `src/benchmarks/<Name>.cu` and `include/perfcli/benchmarks/<Name>.hpp`
-2. Implement the benchmark interface
-3. Register in `src/core/Registry.cpp`: `BenchmarkRegistry::register_benchmark("<name>", ...)`
-4. Add to design docs if parameters or metrics differ from standard patterns
+Create `src/benchmarks/<Name>.cu` and `include/perfcli/benchmarks/<Name>.hpp`. Implement interface, register in `src/core/Registry.cpp`.
+
+### Portability Note
+
+CMakeLists.txt contains hardcoded CUDA 13.1 include path; should use `find_package(CUDA)` for portability across CUDA installations.
 
 ### Dependencies (via FetchContent)
 
-- `CLI11` (or `cxxopts`) for CLI parsing
-- `nlohmann/json` for JSON output
-- `fmt` (or `std::format`) for formatting
-
-Keep versions pinned for reproducibility.
-
-## Output Format Requirements
-
-- Console: Human-readable tables with per-case summaries
-- JSON: Canonical format with system info, run config, and benchmark results
-- Optional CSV (flattened rows)
+CLI11, nlohmann/json, fmt. Keep versions pinned.
 
 ## Definition of Done
 
-- Code compiles without warnings
-- Lints pass (when linting is configured)
+- Compiles without warnings
 - Tests pass
 - Benchmarks produce plausible metrics
-- JSON output is parseable and complete
+- JSON output parseable and complete
 - Documentation updated (if user-facing changes)
