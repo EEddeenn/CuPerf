@@ -1,6 +1,6 @@
-#include "perfcli/core/Runner.hpp"
+#include "cuperf/core/Runner.hpp"
 
-namespace perfcli {
+namespace cuperf {
 
 void RunPlan::add_case(const std::string& benchmark_name,
                         const std::map<std::string, std::string>& params) {

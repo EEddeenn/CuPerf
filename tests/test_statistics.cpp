@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
-#include "perfcli/core/Statistics.hpp"
+#include "cuperf/core/Statistics.hpp"
 #include <vector>
 
 TEST(StatisticsCalculator, EmptySamples) {
   std::vector<double> samples;
-  auto stats = perfcli::StatisticsCalculator::calculate(samples);
+  auto stats = cuperf::StatisticsCalculator::calculate(samples);
 
   EXPECT_EQ(stats.sample_count, 0);
   EXPECT_EQ(stats.mean, 0.0);
@@ -13,7 +13,7 @@ TEST(StatisticsCalculator, EmptySamples) {
 
 TEST(StatisticsCalculator, SingleSample) {
   std::vector<double> samples = {42.0};
-  auto stats = perfcli::StatisticsCalculator::calculate(samples);
+  auto stats = cuperf::StatisticsCalculator::calculate(samples);
 
   EXPECT_EQ(stats.sample_count, 1);
   EXPECT_DOUBLE_EQ(stats.mean, 42.0);
@@ -25,7 +25,7 @@ TEST(StatisticsCalculator, SingleSample) {
 
 TEST(StatisticsCalculator, MultipleSamples) {
   std::vector<double> samples = {1.0, 2.0, 3.0, 4.0, 5.0};
-  auto stats = perfcli::StatisticsCalculator::calculate(samples);
+  auto stats = cuperf::StatisticsCalculator::calculate(samples);
 
   EXPECT_EQ(stats.sample_count, 5);
   EXPECT_DOUBLE_EQ(stats.mean, 3.0);
@@ -40,7 +40,7 @@ TEST(StatisticsCalculator, Percentiles) {
     samples.push_back(static_cast<double>(i));
   }
 
-  auto stats = perfcli::StatisticsCalculator::calculate(samples);
+  auto stats = cuperf::StatisticsCalculator::calculate(samples);
 
   EXPECT_DOUBLE_EQ(stats.p50, 50.5);
   EXPECT_NEAR(stats.p95, 95.05, 0.1);
@@ -49,7 +49,7 @@ TEST(StatisticsCalculator, Percentiles) {
 
 TEST(StatisticsCalculator, TrimmedMean) {
   std::vector<double> samples = {1.0, 2.0, 3.0, 4.0, 5.0, 100.0, -100.0};
-  auto stats = perfcli::StatisticsCalculator::calculate(samples, 0.14);
+  auto stats = cuperf::StatisticsCalculator::calculate(samples, 0.14);
 
   EXPECT_NEAR(stats.trimmed_mean, 3.0, 0.5);
   EXPECT_NEAR(stats.mean, 2.143, 0.1);
@@ -57,7 +57,7 @@ TEST(StatisticsCalculator, TrimmedMean) {
 
 TEST(StatisticsCalculator, StdDev) {
   std::vector<double> samples = {2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0};
-  auto stats = perfcli::StatisticsCalculator::calculate(samples);
+  auto stats = cuperf::StatisticsCalculator::calculate(samples);
 
   EXPECT_DOUBLE_EQ(stats.mean, 5.0);
   EXPECT_NEAR(stats.stddev, 2.138, 0.01);

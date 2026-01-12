@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(perfcli LANGUAGES CXX CUDA)
+project(cuperf LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,9 +48,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fmt)
 
-if(PERFCLI_ENABLE_NVML)
+if(CUPERF_ENABLE_NVML)
   message(STATUS "NVML support requested but not implemented yet")
-  set(PERFCLI_ENABLE_NVML OFF)
+  set(CUPERF_ENABLE_NVML OFF)
 endif()
 
 include_directories(
@@ -58,50 +58,50 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-file(GLOB_RECURSE PERFCLI_CXX_SOURCES
+file(GLOB_RECURSE CUPERF_CXX_SOURCES
   "src/cli/*.cpp"
   "src/core/*.cpp"
   "src/cuda/*.cpp"
 )
 
-file(GLOB_RECURSE PERFCLI_CUDA_SOURCES
+file(GLOB_RECURSE CUPERF_CUDA_SOURCES
   "src/benchmarks/*.cpp"
   "src/benchmarks/*.cu"
 )
 
-file(GLOB_RECURSE PERFCLI_HEADERS
+file(GLOB_RECURSE CUPERF_HEADERS
   "include/**/*.hpp"
   "include/**/*.h"
 )
 
-add_executable(perfcli
+add_executable(cuperf
   src/main.cpp
-  ${PERFCLI_CXX_SOURCES}
-  ${PERFCLI_CUDA_SOURCES}
-  ${PERFCLI_HEADERS}
+  ${CUPERF_CXX_SOURCES}
+  ${CUPERF_CUDA_SOURCES}
+  ${CUPERF_HEADERS}
 )
 
-target_link_libraries(perfcli
+target_link_libraries(cuperf
   PRIVATE
     CLI11::CLI11
     nlohmann_json::nlohmann_json
     fmt::fmt
 )
 
-if(PERFCLI_ENABLE_NVML)
-  target_compile_definitions(perfcli PRIVATE PERFCLI_WITH_NVML)
+if(CUPERF_ENABLE_NVML)
+  target_compile_definitions(cuperf PRIVATE CUPERF_WITH_NVML)
 endif()
 
-if(PERFCLI_ENABLE_CSV)
-  target_compile_definitions(perfcli PRIVATE PERFCLI_ENABLE_CSV)
+if(CUPERF_ENABLE_CSV)
+  target_compile_definitions(cuperf PRIVATE CUPERF_ENABLE_CSV)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  target_compile_options(perfcli PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-O3 -march=native>)
-  target_compile_options(perfcli PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-O3>)
+  target_compile_options(cuperf PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-O3 -march=native>)
+  target_compile_options(cuperf PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-O3>)
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  target_compile_options(perfcli PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-g -O0>)
-  target_compile_options(perfcli PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-G -O0>)
+  target_compile_options(cuperf PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-g -O0>)
+  target_compile_options(cuperf PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-G -O0>)
 endif()
 
 enable_testing()

@@ -1,5 +1,5 @@
-#include "perfcli/cli/Commands.hpp"
-#include "perfcli/cuda/Device.hpp"
+#include "cuperf/cli/Commands.hpp"
+#include "cuperf/cuda/Device.hpp"
 #include <fmt/core.h>
 #include <iostream>
 #include <fstream>
@@ -8,7 +8,7 @@
 #include <sstream>
 #include <cmath>
 
-namespace perfcli {
+namespace cuperf {
 
 int Commands::execute_info(const Args& args) {
   print_system_info();
@@ -41,7 +41,7 @@ int Commands::execute_run(const Args& args) {
     save_results_json(results, config.output_json_file);
   }
 
-#ifdef PERFCLI_ENABLE_CSV
+#ifdef CUPERF_ENABLE_CSV
   if (!config.output_csv_file.empty()) {
     save_results_csv(results, config.output_csv_file);
   }

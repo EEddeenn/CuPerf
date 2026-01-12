@@ -1,10 +1,10 @@
-#include "perfcli/benchmarks/KernelLaunchOverhead.hpp"
-#include "perfcli/util/Error.hpp"
-#include "perfcli/cuda/Stream.hpp"
-#include "perfcli/core/Statistics.hpp"
+#include "cuperf/benchmarks/KernelLaunchOverhead.hpp"
+#include "cuperf/util/Error.hpp"
+#include "cuperf/cuda/Stream.hpp"
+#include "cuperf/core/Statistics.hpp"
 #include <format>
 
-namespace perfcli {
+namespace cuperf {
 
 __global__ void __noinline__ empty_kernel() {
 }

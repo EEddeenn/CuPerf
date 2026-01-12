@@ -1,13 +1,13 @@
-#include "perfcli/benchmarks/MemcpyBandwidth.hpp"
-#include "perfcli/util/Error.hpp"
-#include "perfcli/cuda/Memory.hpp"
-#include "perfcli/cuda/Stream.hpp"
-#include "perfcli/core/Statistics.hpp"
+#include "cuperf/benchmarks/MemcpyBandwidth.hpp"
+#include "cuperf/util/Error.hpp"
+#include "cuperf/cuda/Memory.hpp"
+#include "cuperf/cuda/Stream.hpp"
+#include "cuperf/core/Statistics.hpp"
 #include <format>
 #include <cstring>
 #include <algorithm>
 
-namespace perfcli {
+namespace cuperf {
 
 BenchmarkSpec MemcpyBandwidth::metadata() const {
   BenchmarkSpec spec;

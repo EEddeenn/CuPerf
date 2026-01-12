@@ -82,7 +82,7 @@ cmake/
 Toolchains.cmake
 Options.cmake
 include/
-perfcli/
+cuperf/
 cli/
 core/
 cuda/
@@ -148,7 +148,7 @@ reproducibility.md
 
 Notes:
 - `.cu` files live under `src/benchmarks` (kernels + measured loops).
-- Public headers under `include/perfcli/...` define interfaces and data models.
+- Public headers under `include/cuperf/...` define interfaces and data models.
 
 ---
 
@@ -160,18 +160,18 @@ Notes:
 - CUDA toolkit (assume 12.x, but feature-check instead of hardcoding)
 
 ### CMake design
-- Single executable target: `perfcli`
+- Single executable target: `cuperf`
 - CUDA as a first-class language:
 
-   - `project(perfcli LANGUAGES CXX CUDA)`
+   - `project(cuperf LANGUAGES CXX CUDA)`
    - `set(CMAKE_CXX_STANDARD 23)`
    - `set(CMAKE_CUDA_STANDARD 20)`
 
 - Options:
-  - `PERFCLI_ENABLE_NVML` (default ON if found)
-  - `PERFCLI_ENABLE_CUPTI` (default OFF)
-  - `PERFCLI_ENABLE_CSV` (default OFF)
-  - `PERFCLI_ENABLE_STATIC` (optional)
+  - `CUPERF_ENABLE_NVML` (default ON if found)
+  - `CUPERF_ENABLE_CUPTI` (default OFF)
+  - `CUPERF_ENABLE_CSV` (default OFF)
+  - `CUPERF_ENABLE_STATIC` (optional)
 
 - Performance flags policy:
   - Avoid global `--use_fast_math` by default
@@ -321,11 +321,11 @@ Store raw samples and compute robust summaries:
 ## 9) CLI design (commands + flags)
 
 ### Commands
-- `perfcli list`
+- `cuperf list`
   - list benchmarks and parameters
-- `perfcli info`
+- `cuperf info`
   - print system/GPU info
-- `perfcli run [benchmarks...]`
+- `cuperf run [benchmarks...]`
   - run selected benchmarks
 
 ### Common flags
@@ -346,10 +346,10 @@ Store raw samples and compute robust summaries:
 - `--clock-lock <sm_mhz,mem_mhz>` (best-effort; requires permission)
 
 ### Examples
-- `perfcli list`
-- `perfcli info --device 0`
-- `perfcli run memcpy --sizes-range 1M:8G:2x --pinned on --iters 50 --json -`
-- `perfcli run --tag memory --device 0 --json results.json`
+- `cuperf list`
+- `cuperf info --device 0`
+- `cuperf run memcpy --sizes-range 1M:8G:2x --pinned on --iters 50 --json -`
+- `cuperf run --tag memory --device 0 --json results.json`
 
 ---
 
@@ -525,7 +525,7 @@ Implement once; reuse everywhere.
 - CLI parsing “golden tests” if feasible
 
 ### Smoke tests (GPU, optional)
-- `perfcli selftest`
+- `cuperf selftest`
   - tiny kernel + tiny memcpy
   - basic CUDA sanity check
 
@@ -553,7 +553,7 @@ Treat GPU tests as optional in CI.
 ### Milestone A — Skeleton + device info
 1. Set up CMake project (C++20 + CUDA).
 2. Add deps (CLI11 + nlohmann/json + fmt).
-3. Implement `perfcli info`:
+3. Implement `cuperf info`:
    - enumerate devices
    - print properties
    - optional JSON to stdout (`--json -`)
@@ -568,7 +568,7 @@ Treat GPU tests as optional in CI.
    - run lifecycle
    - results aggregation + JSON emission
 
-**Acceptance:** `perfcli list` shows registered benchmarks; `perfcli run` executes a dummy benchmark.
+**Acceptance:** `cuperf list` shows registered benchmarks; `cuperf run` executes a dummy benchmark.
 
 ### Milestone C — Timing + statistics
 7. Implement `EventTimer` wrapper and `Statistics`.
@@ -608,7 +608,7 @@ Treat GPU tests as optional in CI.
 ---
 
 ## 20) Definition of done
-- ✅ `perfcli list/info/run` functional
+- ✅ `cuperf list/info/run` functional
 - ✅ All 6 core benchmarks implemented (Memcpy, Launch, Mem BW, Compute, Reduction, TensorCore)
 - ✅ JSON output includes system info, per-case config, and summary stats
 - ✅ Warmup separated from measurement

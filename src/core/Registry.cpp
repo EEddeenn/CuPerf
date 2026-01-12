@@ -1,12 +1,12 @@
-#include "perfcli/core/Benchmark.hpp"
-#include "perfcli/benchmarks/MemcpyBandwidth.hpp"
-#include "perfcli/benchmarks/KernelLaunchOverhead.hpp"
-#include "perfcli/benchmarks/DeviceMemBandwidth.hpp"
-#include "perfcli/benchmarks/ComputeThroughput.hpp"
-#include "perfcli/benchmarks/Reduction.hpp"
-#include "perfcli/benchmarks/TensorCore.hpp"
+#include "cuperf/core/Benchmark.hpp"
+#include "cuperf/benchmarks/MemcpyBandwidth.hpp"
+#include "cuperf/benchmarks/KernelLaunchOverhead.hpp"
+#include "cuperf/benchmarks/DeviceMemBandwidth.hpp"
+#include "cuperf/benchmarks/ComputeThroughput.hpp"
+#include "cuperf/benchmarks/Reduction.hpp"
+#include "cuperf/benchmarks/TensorCore.hpp"
 
-using namespace perfcli;
+using namespace cuperf;
 
 namespace {
   BenchmarkRegistrar reg_memcpy(

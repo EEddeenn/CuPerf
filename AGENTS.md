@@ -16,32 +16,32 @@ cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug
 cmake --build build-debug --parallel $(nproc)
 
 # Build with tests
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DPERFCLI_ENABLE_TESTS=ON
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCUPERF_ENABLE_TESTS=ON
 cmake --build build --parallel $(nproc)
 ctest --test-dir build -R <test_name> -V    # Run single test
 ctest --test-dir build -V                   # Run all tests
 
 # Run CLI
-./build/bin/perfcli --help
-./build/bin/perfcli run memcpy --sizes-range 1M:8G:2x --json results.json
+./build/bin/cuperf --help
+./build/bin/cuperf run memcpy --sizes-range 1M:8G:2x --json results.json
 ```
 
 ### CMake Options
 
-- `PERFCLI_ENABLE_NVML` (default: ON, but disabled in CMake as not yet implemented)
-- `PERFCLI_ENABLE_CUPTI` (default: OFF)
-- `PERFCLI_ENABLE_CSV` (default: OFF)
-- `PERFCLI_ENABLE_TESTS` (default: OFF)
-- `PERFCLI_ENABLE_STATIC` (default: OFF)
+- `CUPERF_ENABLE_NVML` (default: ON, but disabled in CMake as not yet implemented)
+- `CUPERF_ENABLE_CUPTI` (default: OFF)
+- `CUPERF_ENABLE_CSV` (default: OFF)
+- `CUPERF_ENABLE_TESTS` (default: OFF)
+- `CUPERF_ENABLE_STATIC` (default: OFF)
 
 ## Code Style Guidelines
 
 ### File Organization
 
-- Headers: `include/perfcli/<module>/`
+- Headers: `include/cuperf/<module>/`
 - Sources: `src/<module>/`
 - CUDA kernels: `src/benchmarks/*.cu`
-- Public interfaces must be in `include/perfcli/`
+- Public interfaces must be in `include/cuperf/`
 
 ### Naming Conventions
 
@@ -56,7 +56,7 @@ ctest --test-dir build -V                   # Run all tests
 
 - Group includes in order: system headers, external library headers, project headers
 - Use angle brackets for external includes: `#include <cuda_runtime.h>`
-- Use quotes for project includes: `#include "perfcli/core/Runner.hpp"`
+- Use quotes for project includes: `#include "cuperf/core/Runner.hpp"`
 - Avoid unnecessary includes; use forward declarations where possible
 
 ### Formatting
@@ -120,7 +120,7 @@ Use `GpuInfo` methods to detect GPU capabilities for feature gating:
 
 ### Testing
 
-Google Test. Test files: `test_*.cpp`. Run single test: `ctest --test-dir build -R <test_name> -V`. Tests require `-DPERFCLI_ENABLE_TESTS=ON`. Use `TEST(SuiteName, TestName)` macros and `EXPECT_*`/`ASSERT_*` assertions.
+Google Test. Test files: `test_*.cpp`. Run single test: `ctest --test-dir build -R <test_name> -V`. Tests require `-DCUPERF_ENABLE_TESTS=ON`. Use `TEST(SuiteName, TestName)` macros and `EXPECT_*`/`ASSERT_*` assertions.
 
 ### Performance Considerations
 
@@ -132,7 +132,7 @@ No formal linting configured. Follow the style guidelines above. Ensure code com
 
 ### Adding New Benchmarks
 
-Create `src/benchmarks/<Name>.cu` and `include/perfcli/benchmarks/<Name>.hpp`. Implement interface, register in `src/core/Registry.cpp`.
+Create `src/benchmarks/<Name>.cu` and `include/cuperf/benchmarks/<Name>.hpp`. Implement interface, register in `src/core/Registry.cpp`.
 
 ### Portability Note
 

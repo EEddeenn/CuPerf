@@ -43,13 +43,13 @@ cmake --build build-debug --parallel $(nproc)
 
 ```bash
 # NVML support (default: ON, but not yet implemented)
-cmake -B build -DPERFCLI_ENABLE_NVML=OFF
+cmake -B build -DCUPERF_ENABLE_NVML=OFF
 
 # Enable CSV output format
-cmake -B build -DPERFCLI_ENABLE_CSV=ON
+cmake -B build -DCUPERF_ENABLE_CSV=ON
 
 # Enable tests
-cmake -B build -DPERFCLI_ENABLE_TESTS=ON
+cmake -B build -DCUPERF_ENABLE_TESTS=ON
 ```
 
 ## Installation
@@ -59,29 +59,29 @@ cmake -B build -DPERFCLI_ENABLE_TESTS=ON
 cmake --install build
 
 # Or run directly from build directory
-./build/bin/perfcli --help
+./build/bin/cuperf --help
 ```
 
 ## Quick Start
 
 ```bash
 # Show GPU information
-./build/bin/perfcli info
+./build/bin/cuperf info
 
 # List available benchmarks
-./build/bin/perfcli list
+./build/bin/cuperf list
 
 # Run a simple benchmark
-./build/bin/perfcli run kernel_launch --iters 100
+./build/bin/cuperf run kernel_launch --iters 100
 
 # Run multiple sizes
-./build/bin/perfcli run compute --sizes 1M,10M,100M --dtype fp16 --iters 50
+./build/bin/cuperf run compute --sizes 1M,10M,100M --dtype fp16 --iters 50
 
 # Run with JSON output
-./build/bin/perfcli run memcpy --sizes-range 1M:1G:2x --json results.json
+./build/bin/cuperf run memcpy --sizes-range 1M:1G:2x --json results.json
 
 # Filter benchmarks by tag
-./build/bin/perfcli run --tag memory --sizes 10M
+./build/bin/cuperf run --tag memory --sizes 10M
 ```
 
 ## Available Benchmarks
@@ -101,7 +101,7 @@ Measures host-to-device (H2D), device-to-host (D2H), and device-to-device (D2D) 
 
 **Example:**
 ```bash
-./build/bin/perfcli run memcpy --sizes 10M,100M --direction H2D --pinned --async
+./build/bin/cuperf run memcpy --sizes 10M,100M --direction H2D --pinned --async
 ```
 
 ### `compute` - Compute Throughput
@@ -118,9 +118,9 @@ Measures compute throughput using FMA (float), FMA2 (half), or DP4A (int8) opera
 
 **Example:**
 ```bash
-./build/bin/perfcli run compute --sizes 10M,100M --dtype fp32 --iters 10
-./build/bin/perfcli run compute --sizes 10M,100M --dtype int8
-./build/bin/perfcli run compute --sizes 10M,100M --dtype fp4
+./build/bin/cuperf run compute --sizes 10M,100M --dtype fp32 --iters 10
+./build/bin/cuperf run compute --sizes 10M,100M --dtype int8
+./build/bin/cuperf run compute --sizes 10M,100M --dtype fp4
 ```
 
 ### `tensor_core` - Tensor Core GEMM
@@ -144,10 +144,10 @@ Measures GEMM performance using WMMA (Warp Matrix Multiply-Accumulate) API for t
 
 **Example:**
 ```bash
-./build/bin/perfcli run tensor_core --dtype fp16 --m 4096 --n 4096 --k 4096
-./build/bin/perfcli run tensor_core --dtype bf16 --m 4096 --n 4096 --k 4096
-./build/bin/perfcli run tensor_core --dtype int8 --m 2048 --n 2048 --k 2048 --gemm-iters 5
-./build/bin/perfcli run tensor_core --dtype fp4 --m 4096 --n 4096 --k 4096
+./build/bin/cuperf run tensor_core --dtype fp16 --m 4096 --n 4096 --k 4096
+./build/bin/cuperf run tensor_core --dtype bf16 --m 4096 --n 4096 --k 4096
+./build/bin/cuperf run tensor_core --dtype int8 --m 2048 --n 2048 --k 2048 --gemm-iters 5
+./build/bin/cuperf run tensor_core --dtype fp4 --m 4096 --n 4096 --k 4096
 ```
 
 ### `device_mem` - Device Memory Bandwidth
@@ -163,7 +163,7 @@ Measures device memory bandwidth for different access patterns.
 
 **Example:**
 ```bash
-./build/bin/perfcli run device_mem --sizes 10M,100M --pattern read_write
+./build/bin/cuperf run device_mem --sizes 10M,100M --pattern read_write
 ```
 
 ### `kernel_launch` - Kernel Launch Overhead
@@ -177,7 +177,7 @@ Measures latency of launching an empty kernel.
 
 **Example:**
 ```bash
-./build/bin/perfcli run kernel_launch --iters 200
+./build/bin/cuperf run kernel_launch --iters 200
 ```
 
 ### `reduction` - Reduction Performance
@@ -193,7 +193,7 @@ Measures sum reduction throughput using a parallel reduction algorithm.
 
 **Example:**
 ```bash
-./build/bin/perfcli run reduction --sizes 1M,10M,100M
+./build/bin/cuperf run reduction --sizes 1M,10M,100M
 ```
 
 ## Command Reference
@@ -202,22 +202,22 @@ Measures sum reduction throughput using a parallel reduction algorithm.
 
 ```bash
 # Display help
-./build/bin/perfcli --help
+./build/bin/cuperf --help
 
 # Display version
-./build/bin/perfcli --version
+./build/bin/cuperf --version
 
 # Show GPU and system information
-./build/bin/perfcli info
+./build/bin/cuperf info
 
 # List available benchmarks
-./build/bin/perfcli list
+./build/bin/cuperf list
 ```
 
 ### `run` Command Options
 
 ```bash
-./build/bin/perfcli run [OPTIONS] [benchmarks...]
+./build/bin/cuperf run [OPTIONS] [benchmarks...]
 
 Options:
   -d, --device INT           GPU device index (default: 0)
@@ -285,7 +285,7 @@ compute             116.13 µs  121.64 µs  117.37 µs
 Structured machine-readable format:
 
 ```bash
-./build/bin/perfcli run compute --sizes 10M --json results.json
+./build/bin/cuperf run compute --sizes 10M --json results.json
 ```
 
 JSON structure:
@@ -328,10 +328,10 @@ JSON structure:
 ```
 
 ### CSV Output (Optional)
-When built with `-DPERFCLI_ENABLE_CSV=ON`:
+When built with `-DCUPERF_ENABLE_CSV=ON`:
 
 ```bash
-./build/bin/perfcli run compute --sizes 10M --csv results.csv
+./build/bin/cuperf run compute --sizes 10M --csv results.csv
 ```
 
 CSV structure:
@@ -353,7 +353,7 @@ Kuda uses robust statistical methods to ensure accurate measurements:
 
 1. **Always use pinned memory** for best H2D/D2H performance:
    ```bash
-   ./build/bin/perfcli run memcpy --pinned --async
+   ./build/bin/cuperf run memcpy --pinned --async
    ```
 
 2. **Use large workloads** to measure actual bandwidth/capability, not overhead:
@@ -367,8 +367,8 @@ Kuda uses robust statistical methods to ensure accurate measurements:
 
 4. **Compare different access patterns** for device memory benchmarks:
    ```bash
-   ./build/bin/perfcli run device_mem --pattern read
-   ./build/bin/perfcli run device_mem --pattern read_write
+   ./build/bin/cuperf run device_mem --pattern read
+   ./build/bin/cuperf run device_mem --pattern read_write
    ```
 
 5. **Check for thermal throttling** by observing p95/p99 vs median variance
@@ -382,7 +382,7 @@ kuda/
  ├── CMakeLists.txt
  ├── cmake/
  │   └── Options.cmake
- ├── include/perfcli/
+ ├── include/cuperf/
  │   ├── cli/          # CLI argument parsing and commands
  │   ├── core/         # Core interfaces (Benchmark, Runner, Types)
  │   ├── cuda/         # CUDA runtime wrappers
@@ -399,7 +399,7 @@ kuda/
 
 ### Adding New Benchmarks
 
-1. Create header: `include/perfcli/benchmarks/MyBenchmark.hpp`
+1. Create header: `include/cuperf/benchmarks/MyBenchmark.hpp`
 2. Create implementation: `src/benchmarks/MyBenchmark.cu`
 3. Register in `src/core/Registry.cpp`:
    ```cpp

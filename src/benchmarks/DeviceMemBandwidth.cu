@@ -1,13 +1,13 @@
-#include "perfcli/benchmarks/DeviceMemBandwidth.hpp"
-#include "perfcli/util/Error.hpp"
-#include "perfcli/cuda/Memory.hpp"
-#include "perfcli/cuda/Stream.hpp"
-#include "perfcli/core/Statistics.hpp"
+#include "cuperf/benchmarks/DeviceMemBandwidth.hpp"
+#include "cuperf/util/Error.hpp"
+#include "cuperf/cuda/Memory.hpp"
+#include "cuperf/cuda/Stream.hpp"
+#include "cuperf/core/Statistics.hpp"
 #include <format>
 #include <cstring>
 #include <vector>
 
-namespace perfcli {
+namespace cuperf {
 
 __global__ void __launch_bounds__(256, 2) read_kernel(const float* __restrict__ data, size_t n, int iters) {
   const size_t idx = (blockIdx.x * blockDim.x + threadIdx.x) * 4;

@@ -1,35 +1,35 @@
 #include <gtest/gtest.h>
-#include "perfcli/core/Types.hpp"
+#include "cuperf/core/Types.hpp"
 #include <sstream>
 
 TEST(DataType, SizeAndStringConversion) {
-  EXPECT_EQ(perfcli::data_type_size(perfcli::DataType::Float32), sizeof(float));
-  EXPECT_EQ(perfcli::data_type_size(perfcli::DataType::Float16), 2);
-  EXPECT_EQ(perfcli::data_type_size(perfcli::DataType::BFloat16), 2);
-  EXPECT_EQ(perfcli::data_type_size(perfcli::DataType::Int8), 1);
-  EXPECT_EQ(perfcli::data_type_size(perfcli::DataType::Int32), sizeof(int32_t));
+  EXPECT_EQ(cuperf::data_type_size(cuperf::DataType::Float32), sizeof(float));
+  EXPECT_EQ(cuperf::data_type_size(cuperf::DataType::Float16), 2);
+  EXPECT_EQ(cuperf::data_type_size(cuperf::DataType::BFloat16), 2);
+  EXPECT_EQ(cuperf::data_type_size(cuperf::DataType::Int8), 1);
+  EXPECT_EQ(cuperf::data_type_size(cuperf::DataType::Int32), sizeof(int32_t));
 
-  EXPECT_EQ(perfcli::data_type_to_string(perfcli::DataType::Float32), "fp32");
-  EXPECT_EQ(perfcli::data_type_to_string(perfcli::DataType::Float16), "fp16");
-  EXPECT_EQ(perfcli::data_type_to_string(perfcli::DataType::BFloat16), "bf16");
-  EXPECT_EQ(perfcli::data_type_to_string(perfcli::DataType::Int8), "int8");
-  EXPECT_EQ(perfcli::data_type_to_string(perfcli::DataType::Int32), "int32");
+  EXPECT_EQ(cuperf::data_type_to_string(cuperf::DataType::Float32), "fp32");
+  EXPECT_EQ(cuperf::data_type_to_string(cuperf::DataType::Float16), "fp16");
+  EXPECT_EQ(cuperf::data_type_to_string(cuperf::DataType::BFloat16), "bf16");
+  EXPECT_EQ(cuperf::data_type_to_string(cuperf::DataType::Int8), "int8");
+  EXPECT_EQ(cuperf::data_type_to_string(cuperf::DataType::Int32), "int32");
 
-  EXPECT_EQ(perfcli::string_to_data_type("fp32"), perfcli::DataType::Float32);
-  EXPECT_EQ(perfcli::string_to_data_type("fp16"), perfcli::DataType::Float16);
-  EXPECT_EQ(perfcli::string_to_data_type("bf16"), perfcli::DataType::BFloat16);
-  EXPECT_EQ(perfcli::string_to_data_type("int8"), perfcli::DataType::Int8);
-  EXPECT_EQ(perfcli::string_to_data_type("int32"), perfcli::DataType::Int32);
+  EXPECT_EQ(cuperf::string_to_data_type("fp32"), cuperf::DataType::Float32);
+  EXPECT_EQ(cuperf::string_to_data_type("fp16"), cuperf::DataType::Float16);
+  EXPECT_EQ(cuperf::string_to_data_type("bf16"), cuperf::DataType::BFloat16);
+  EXPECT_EQ(cuperf::string_to_data_type("int8"), cuperf::DataType::Int8);
+  EXPECT_EQ(cuperf::string_to_data_type("int32"), cuperf::DataType::Int32);
 }
 
 TEST(Direction, StringConversion) {
-  EXPECT_EQ(perfcli::direction_to_string(perfcli::Direction::HostToDevice), "H2D");
-  EXPECT_EQ(perfcli::direction_to_string(perfcli::Direction::DeviceToHost), "D2H");
-  EXPECT_EQ(perfcli::direction_to_string(perfcli::Direction::DeviceToDevice), "D2D");
+  EXPECT_EQ(cuperf::direction_to_string(cuperf::Direction::HostToDevice), "H2D");
+  EXPECT_EQ(cuperf::direction_to_string(cuperf::Direction::DeviceToHost), "D2H");
+  EXPECT_EQ(cuperf::direction_to_string(cuperf::Direction::DeviceToDevice), "D2D");
 }
 
 TEST(BenchmarkResult, DefaultConstruction) {
-  perfcli::BenchmarkResult result;
+  cuperf::BenchmarkResult result;
 
   EXPECT_TRUE(result.benchmark_name.empty());
   EXPECT_TRUE(result.params.empty());
@@ -38,7 +38,7 @@ TEST(BenchmarkResult, DefaultConstruction) {
 }
 
 TEST(BenchmarkResult, JsonSerialization) {
-  perfcli::BenchmarkResult result;
+  cuperf::BenchmarkResult result;
   result.benchmark_name = "test_benchmark";
   result.device_index = 0;
   result.success = true;
@@ -57,7 +57,7 @@ TEST(BenchmarkResult, JsonSerialization) {
 }
 
 TEST(BenchmarkSpec, DefaultConstruction) {
-  perfcli::BenchmarkSpec spec;
+  cuperf::BenchmarkSpec spec;
 
   EXPECT_TRUE(spec.name.empty());
   EXPECT_TRUE(spec.description.empty());

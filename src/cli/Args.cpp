@@ -1,13 +1,13 @@
-#include "perfcli/cli/Args.hpp"
+#include "cuperf/cli/Args.hpp"
 #include <CLI/CLI.hpp>
 #include <iostream>
 
-namespace perfcli {
+namespace cuperf {
 
 Args Args::parse(int argc, char* argv[]) {
   Args args;
 
-  CLI::App app{"CUDA Performance Benchmarking CLI Tool", "perfcli"};
+  CLI::App app{"CUDA Performance Benchmarking CLI Tool", "cuperf"};
 
   app.set_help_flag("-h,--help", "Display this help and exit");
   app.set_version_flag("-v,--version", "0.1.0");

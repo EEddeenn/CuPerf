@@ -1,4 +1,4 @@
-if(PERFCLI_ENABLE_TESTS)
+if(CUPERF_ENABLE_TESTS)
   include(FetchContent)
 
   FetchContent_Declare(

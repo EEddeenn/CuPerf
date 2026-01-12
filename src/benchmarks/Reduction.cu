@@ -1,13 +1,13 @@
-#include "perfcli/benchmarks/Reduction.hpp"
-#include "perfcli/util/Error.hpp"
-#include "perfcli/cuda/Memory.hpp"
-#include "perfcli/cuda/Stream.hpp"
-#include "perfcli/core/Statistics.hpp"
+#include "cuperf/benchmarks/Reduction.hpp"
+#include "cuperf/util/Error.hpp"
+#include "cuperf/cuda/Memory.hpp"
+#include "cuperf/cuda/Stream.hpp"
+#include "cuperf/core/Statistics.hpp"
 #include <format>
 #include <vector>
 #include <numeric>
 
-namespace perfcli {
+namespace cuperf {
 
 inline __device__ float warp_reduce_sum(float val) {
   constexpr unsigned int full_mask = 0xffffffff;

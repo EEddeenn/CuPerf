@@ -1,10 +1,10 @@
-#include "perfcli/cuda/Device.hpp"
-#include "perfcli/util/Error.hpp"
+#include "cuperf/cuda/Device.hpp"
+#include "cuperf/util/Error.hpp"
 #include <sstream>
 #include <iomanip>
 #include <string_view>
 
-namespace perfcli {
+namespace cuperf {
 
 int GpuInfo::major_version() const {
   size_t dot_pos = compute_capability.find('.');

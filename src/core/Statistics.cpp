@@ -1,6 +1,6 @@
-#include "perfcli/core/Statistics.hpp"
+#include "cuperf/core/Statistics.hpp"
 
-namespace perfcli {
+namespace cuperf {
 
 Statistics StatisticsCalculator::calculate(const std::vector<double>& samples, double trim_percent) {
   return calculate(std::span<const double>(samples), trim_percent);

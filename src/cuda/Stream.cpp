@@ -1,7 +1,7 @@
-#include "perfcli/cuda/Stream.hpp"
-#include "perfcli/util/Error.hpp"
+#include "cuperf/cuda/Stream.hpp"
+#include "cuperf/util/Error.hpp"
 
-namespace perfcli {
+namespace cuperf {
 
 Stream::Stream() : stream_(nullptr), is_external_(false) {
   CUDA_CHECK(cudaStreamCreate(&stream_));

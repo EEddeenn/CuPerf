@@ -1,6 +1,6 @@
-#include "perfcli/core/Benchmark.hpp"
+#include "cuperf/core/Benchmark.hpp"
 
-namespace perfcli {
+namespace cuperf {
 
 BenchmarkContext::BenchmarkContext(int device, int stream_count)
     : device_index(device), streams(create_streams(stream_count)) {}

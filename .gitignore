@@ -54,8 +54,8 @@ results.csv
 # Benchmark data
 benchmarks*.json
 benchmarks*.csv
-perfcli_results*.json
-perfcli_results*.csv
+cuperf_results*.json
+cuperf_results*.csv
 
 # Profiling
 *.nvvp

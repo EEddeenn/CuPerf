@@ -1,8 +1,8 @@
-#include "perfcli/benchmarks/ComputeThroughput.hpp"
-#include "perfcli/util/Error.hpp"
-#include "perfcli/cuda/Memory.hpp"
-#include "perfcli/cuda/Stream.hpp"
-#include "perfcli/core/Statistics.hpp"
+#include "cuperf/benchmarks/ComputeThroughput.hpp"
+#include "cuperf/util/Error.hpp"
+#include "cuperf/cuda/Memory.hpp"
+#include "cuperf/cuda/Stream.hpp"
+#include "cuperf/core/Statistics.hpp"
 #include <cuda_fp16.h>
 #include <cuda_bf16.h>
 #include <format>
@@ -10,7 +10,7 @@
 #include <cmath>
 #include <algorithm>
 
-namespace perfcli {
+namespace cuperf {
 
 __global__ void __launch_bounds__(256, 2) fma_kernel(float* __restrict__ data, size_t n, int iters) {
   const size_t base_idx = (blockIdx.x * blockDim.x + threadIdx.x) * 8;

@@ -1,8 +1,8 @@
-#include "perfcli/benchmarks/TensorCore.hpp"
-#include "perfcli/util/Error.hpp"
-#include "perfcli/cuda/Memory.hpp"
-#include "perfcli/cuda/Stream.hpp"
-#include "perfcli/core/Statistics.hpp"
+#include "cuperf/benchmarks/TensorCore.hpp"
+#include "cuperf/util/Error.hpp"
+#include "cuperf/cuda/Memory.hpp"
+#include "cuperf/cuda/Stream.hpp"
+#include "cuperf/core/Statistics.hpp"
 #include <cuda_fp16.h>
 #include <cuda_bf16.h>
 #include <mma.h>
@@ -11,7 +11,7 @@
 #include <cmath>
 #include <algorithm>
 
-namespace perfcli {
+namespace cuperf {
 
 using namespace nvcuda::wmma;
 

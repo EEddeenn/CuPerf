@@ -1,8 +1,8 @@
-#include "perfcli/cli/Args.hpp"
-#include "perfcli/cli/Commands.hpp"
+#include "cuperf/cli/Args.hpp"
+#include "cuperf/cli/Commands.hpp"
 #include <iostream>
 
-using namespace perfcli;
+using namespace cuperf;
 
 int main(int argc, char* argv[]) {
   try {

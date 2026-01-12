@@ -1,11 +1,11 @@
-#include "perfcli/core/Types.hpp"
+#include "cuperf/core/Types.hpp"
 #include <fmt/core.h>
 #include <cuda_runtime.h>
 #include <algorithm>
 #include <numeric>
 #include <sstream>
 
-namespace perfcli {
+namespace cuperf {
 
 std::string data_type_to_string(DataType dtype) {
   switch (dtype) {
