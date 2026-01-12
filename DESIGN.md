@@ -76,10 +76,9 @@ This document describes a detailed, implementation-ready architecture for a **CU
 
 A scalable layout:
 
-cuda-perf-cli/
+CuPerf/
 CMakeLists.txt
 cmake/
-Toolchains.cmake
 Options.cmake
 include/
 cuperf/
@@ -87,7 +86,6 @@ cli/
 core/
 cuda/
 benchmarks/
-report/
 util/
 src/
 main.cpp
@@ -100,55 +98,43 @@ Runner.cpp
 Runner.hpp
 Registry.cpp
 Registry.hpp
-RunPlan.cpp
-RunPlan.hpp
 Statistics.cpp
 Statistics.hpp
-Sweep.cpp
-Sweep.hpp
+Types.cpp
+Types.hpp
 cuda/
 Device.cpp
 Device.hpp
 Stream.cpp
 Stream.hpp
-EventTimer.cpp
-EventTimer.hpp
 Memory.cpp
 Memory.hpp
-Nvml.cpp (optional)
-Nvml.hpp
-report/
-ConsoleReport.cpp
-ConsoleReport.hpp
-JsonReport.cpp
-JsonReport.hpp
-CsvReport.cpp (optional)
- benchmarks/
+benchmarks/
 MemcpyBandwidth.cu
 MemcpyBandwidth.hpp
 DeviceMemBandwidth.cu
 DeviceMemBandwidth.hpp
 KernelLaunchOverhead.cu
+KernelLaunchOverhead.hpp
 ComputeThroughput.cu
 ComputeThroughput.hpp
 Reduction.cu
 Reduction.hpp
 TensorCore.cu
 TensorCore.hpp
-third_party/
-(optional vendored deps or FetchContent)
 tests/
 test_statistics.cpp
-test_sweep.cpp
+test_types.cpp
 docs/
 benchmark_design.md
 cli_usage.md
 reproducibility.md
 
-
 Notes:
-- `.cu` files live under `src/benchmarks` (kernels + measured loops).
+- `.cu` files live under `src/benchmarks/` (kernels + measured loops).
 - Public headers under `include/cuperf/...` define interfaces and data models.
+- EventTimer is defined within `Stream.cpp`/`Stream.hpp`.
+- Report functionality integrated into Commands.cpp.
 
 ---
 

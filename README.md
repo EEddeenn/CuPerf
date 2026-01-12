@@ -342,7 +342,7 @@ compute,0,11.49,23.19,33.45,13.03,5.40,4563.79
 
 ## Statistical Analysis
 
-Kuda uses robust statistical methods to ensure accurate measurements:
+CuPerf uses robust statistical methods to ensure accurate measurements:
 
 - **Warmup**: 50 iterations by default to amortize JIT, cache, and context overhead
 - **Multiple Samples**: 200+ iterations per test case
@@ -378,7 +378,7 @@ Kuda uses robust statistical methods to ensure accurate measurements:
 ### Directory Structure
 
 ```
-kuda/
+CuPerf/
  ├── CMakeLists.txt
  ├── cmake/
  │   └── Options.cmake

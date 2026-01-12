@@ -136,7 +136,7 @@ Create `src/benchmarks/<Name>.cu` and `include/cuperf/benchmarks/<Name>.hpp`. Im
 
 ### Portability Note
 
-CMakeLists.txt contains hardcoded CUDA 13.1 include path; should use `find_package(CUDA)` for portability across CUDA installations.
+CMakeLists.txt uses `find_package(CUDAToolkit)` for portability across CUDA installations. This automatically finds CUDA and sets up proper include paths and libraries.
 
 ### Dependencies (via FetchContent)
 
