@@ -27,8 +27,8 @@ A modern, extensible command-line tool for benchmarking GPU performance on NVIDI
 
 ```bash
 # Clone repository
-git clone <repository-url>
-cd cuperf
+git clone https://github.com/EEddeenn/CuPerf.git
+cd CuPerf
 
 # Configure and build (Release mode)
 cmake -B build -DCMAKE_BUILD_TYPE=Release
