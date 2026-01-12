@@ -28,7 +28,7 @@ ctest --test-dir build -V                   # Run all tests
 
 ### CMake Options
 
-- `PERFCLI_ENABLE_NVML` (default: ON)
+- `PERFCLI_ENABLE_NVML` (default: ON, but disabled in CMake as not yet implemented)
 - `PERFCLI_ENABLE_CUPTI` (default: OFF)
 - `PERFCLI_ENABLE_CSV` (default: OFF)
 - `PERFCLI_ENABLE_TESTS` (default: OFF)

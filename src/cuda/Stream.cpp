@@ -76,11 +76,15 @@ Event& Event::operator=(Event&& other) noexcept {
 }
 
 void Event::record(cudaStream_t stream) const {
-  CUDA_CHECK(cudaEventRecord(event_, stream));
+  if (event_) {
+    CUDA_CHECK(cudaEventRecord(event_, stream));
+  }
 }
 
 void Event::sync() const {
-  CUDA_CHECK(cudaEventSynchronize(event_));
+  if (event_) {
+    CUDA_CHECK(cudaEventSynchronize(event_));
+  }
 }
 
 float Event::elapsed_time_ms(const Event& start) const {
