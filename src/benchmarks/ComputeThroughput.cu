@@ -19,20 +19,21 @@ __global__ void __launch_bounds__(256, 2) fma_kernel(float* __restrict__ data, s
   float4 sum[2];
   sum[0] = *reinterpret_cast<float4*>(&data[base_idx]);
   sum[1] = *reinterpret_cast<float4*>(&data[base_idx + 4]);
-  const float a = 1.0001f;
-  const float b = 0.0001f;
+  constexpr float kA = 1.0001f;
+  constexpr float kB = 0.0001f;
 
+  #pragma unroll
   for (int i = 0; i < iters; ++i) {
-#pragma unroll
+    #pragma unroll
     for (int j = 0; j < 16; ++j) {
-      sum[0].x = __fmaf_rn(sum[0].x, a, b);
-      sum[0].y = __fmaf_rn(sum[0].y, a, b);
-      sum[0].z = __fmaf_rn(sum[0].z, a, b);
-      sum[0].w = __fmaf_rn(sum[0].w, a, b);
-      sum[1].x = __fmaf_rn(sum[1].x, a, b);
-      sum[1].y = __fmaf_rn(sum[1].y, a, b);
-      sum[1].z = __fmaf_rn(sum[1].z, a, b);
-      sum[1].w = __fmaf_rn(sum[1].w, a, b);
+      sum[0].x = __fmaf_rn(sum[0].x, kA, kB);
+      sum[0].y = __fmaf_rn(sum[0].y, kA, kB);
+      sum[0].z = __fmaf_rn(sum[0].z, kA, kB);
+      sum[0].w = __fmaf_rn(sum[0].w, kA, kB);
+      sum[1].x = __fmaf_rn(sum[1].x, kA, kB);
+      sum[1].y = __fmaf_rn(sum[1].y, kA, kB);
+      sum[1].z = __fmaf_rn(sum[1].z, kA, kB);
+      sum[1].w = __fmaf_rn(sum[1].w, kA, kB);
     }
   }
   *reinterpret_cast<float4*>(&data[base_idx]) = sum[0];
@@ -44,13 +45,14 @@ __global__ void __launch_bounds__(256, 2) fp16_kernel(__half* __restrict__ data,
   if (idx >= n) return;
 
   __half2 sum2 = *reinterpret_cast<__half2*>(&data[idx * 2]);
-  const __half2 a2 = __float2half2_rn(1.0001f);
-  const __half2 b2 = __float2half2_rn(0.0001f);
+  const __half2 kA2 = __float2half2_rn(1.0001f);
+  const __half2 kB2 = __float2half2_rn(0.0001f);
 
+  #pragma unroll
   for (int i = 0; i < iters; ++i) {
-#pragma unroll
+    #pragma unroll
     for (int j = 0; j < 16; ++j) {
-      sum2 = __hfma2(sum2, a2, b2);
+      sum2 = __hfma2(sum2, kA2, kB2);
     }
   }
   *reinterpret_cast<__half2*>(&data[idx * 2]) = sum2;
@@ -61,14 +63,15 @@ __global__ void __launch_bounds__(256, 2) bf16_kernel(__nv_bfloat16* __restrict_
   if (idx >= n) return;
 
   __nv_bfloat162 sum2 = *reinterpret_cast<__nv_bfloat162*>(&data[idx * 2]);
-  const __nv_bfloat162 a2 = __float2bfloat162_rn(1.0001f);
-  const __nv_bfloat162 b2 = __float2bfloat162_rn(0.0001f);
+  const __nv_bfloat162 kA2 = __float2bfloat162_rn(1.0001f);
+  const __nv_bfloat162 kB2 = __float2bfloat162_rn(0.0001f);
 
+  #pragma unroll
   for (int i = 0; i < iters; ++i) {
-#pragma unroll
+    #pragma unroll
     for (int j = 0; j < 16; ++j) {
-      sum2.x = sum2.x * a2.x + b2.x;
-      sum2.y = sum2.y * a2.y + b2.y;
+      sum2.x = sum2.x * kA2.x + kB2.x;
+      sum2.y = sum2.y * kA2.y + kB2.y;
     }
   }
   *reinterpret_cast<__nv_bfloat162*>(&data[idx * 2]) = sum2;
@@ -79,13 +82,14 @@ __global__ void __launch_bounds__(256, 2) int8_kernel(int8_t* __restrict__ data,
   if (idx >= n) return;
 
   int sum = data[idx];
-  constexpr int a = 127;
-  constexpr int b = 1;
+  constexpr int kA = 127;
+  constexpr int kB = 1;
 
+  #pragma unroll
   for (int i = 0; i < iters; ++i) {
-#pragma unroll
+    #pragma unroll
     for (int j = 0; j < 16; ++j) {
-      sum = __dp4a(sum, a, b);
+      sum = __dp4a(sum, kA, kB);
     }
   }
   data[idx] = static_cast<int8_t>(sum);
@@ -96,16 +100,19 @@ __global__ void __launch_bounds__(256, 2) fp4_kernel(uint8_t* __restrict__ data,
   if (idx >= n) return;
 
   uint8_t packed = data[idx];
-  int8_t val0 = (packed & 0x0F);
-  int8_t val1 = (packed >> 4);
-  constexpr int8_t a = 7;
-  constexpr int8_t b = 1;
+  uint8_t nibble0 = packed & 0x0F;
+  uint8_t nibble1 = packed >> 4;
+  int8_t val0 = static_cast<int8_t>((nibble0 & 0x08) ? (nibble0 | 0xF0) : nibble0);
+  int8_t val1 = static_cast<int8_t>((nibble1 & 0x08) ? (nibble1 | 0xF0) : nibble1);
+  constexpr int8_t kA = 7;
+  constexpr int8_t kB = 1;
 
+  #pragma unroll
   for (int i = 0; i < iters; ++i) {
-#pragma unroll
+    #pragma unroll
     for (int j = 0; j < 16; ++j) {
-      val0 = (val0 * a) + b;
-      val1 = (val1 * a) + b;
+      val0 = (val0 * kA) + kB;
+      val1 = (val1 * kA) + kB;
     }
   }
 
@@ -165,38 +172,38 @@ void ComputeThroughput::setup(BenchmarkContext& ctx, const std::map<std::string,
 
 void ComputeThroughput::run_warmup(BenchmarkContext& ctx, const std::map<std::string, std::string>& params) {
   size_t elem_count = size_ / data_type_size(dtype_);
-  int block_size = 256;
+  constexpr int kBlockSize = 256;
   int grid_size;
 
   if (dtype_ == DataType::Float32) {
-    grid_size = ((elem_count / 8) + block_size - 1) / block_size;
+    grid_size = ((elem_count / 8) + kBlockSize - 1) / kBlockSize;
   } else if (dtype_ == DataType::Float16 || dtype_ == DataType::BFloat16) {
-    grid_size = ((elem_count / 2) + block_size - 1) / block_size;
+    grid_size = ((elem_count / 2) + kBlockSize - 1) / kBlockSize;
   } else {
-    grid_size = (elem_count + block_size - 1) / block_size;
+    grid_size = (elem_count + kBlockSize - 1) / kBlockSize;
   }
 
   for (int i = 0; i < 5; ++i) {
     switch (dtype_) {
       case DataType::Float16:
-        fp16_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+        fp16_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
             static_cast<__half*>(d_data_), elem_count / 2, iters_per_launch_);
         break;
       case DataType::BFloat16:
-        bf16_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+        bf16_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
             static_cast<__nv_bfloat16*>(d_data_), elem_count / 2, iters_per_launch_);
         break;
       case DataType::Int8:
-        int8_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+        int8_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
             static_cast<int8_t*>(d_data_), elem_count, iters_per_launch_);
         break;
       case DataType::Float4:
-        fp4_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+        fp4_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
             static_cast<uint8_t*>(d_data_), elem_count, iters_per_launch_);
         break;
       case DataType::Float32:
       default:
-        fma_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+        fma_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
             static_cast<float*>(d_data_), elem_count, iters_per_launch_);
         break;
     }
@@ -219,15 +226,15 @@ BenchmarkResult ComputeThroughput::run_measure(BenchmarkContext& ctx, const std:
   int iters = std::stoi(get_param("iters", "200"));
 
   size_t elem_count = size_ / data_type_size(dtype_);
-  int block_size = 256;
+  constexpr int kBlockSize = 256;
   int grid_size;
 
   if (dtype_ == DataType::Float32) {
-    grid_size = ((elem_count / 8) + block_size - 1) / block_size;
+    grid_size = ((elem_count / 8) + kBlockSize - 1) / kBlockSize;
   } else if (dtype_ == DataType::Float16 || dtype_ == DataType::BFloat16) {
-    grid_size = ((elem_count / 2) + block_size - 1) / block_size;
+    grid_size = ((elem_count / 2) + kBlockSize - 1) / kBlockSize;
   } else {
-    grid_size = (elem_count + block_size - 1) / block_size;
+    grid_size = (elem_count + kBlockSize - 1) / kBlockSize;
   }
 
   EventTimer timer(ctx.streams[0]->get());
@@ -238,24 +245,24 @@ BenchmarkResult ComputeThroughput::run_measure(BenchmarkContext& ctx, const std:
 
     switch (dtype_) {
       case DataType::Float16:
-        fp16_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+        fp16_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
             static_cast<__half*>(d_data_), elem_count / 2, iters_per_launch_);
         break;
       case DataType::BFloat16:
-        bf16_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+        bf16_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
             static_cast<__nv_bfloat16*>(d_data_), elem_count / 2, iters_per_launch_);
         break;
       case DataType::Int8:
-        int8_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+        int8_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
             static_cast<int8_t*>(d_data_), elem_count, iters_per_launch_);
         break;
       case DataType::Float4:
-        fp4_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+        fp4_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
             static_cast<uint8_t*>(d_data_), elem_count, iters_per_launch_);
         break;
       case DataType::Float32:
       default:
-        fma_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+        fma_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
             static_cast<float*>(d_data_), elem_count, iters_per_launch_);
         break;
     }

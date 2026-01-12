@@ -30,16 +30,28 @@ __global__ void __launch_bounds__(256, 2) tensor_core_fp4_unpack_kernel(
   size_t total_a = m * k;
   size_t total_b = k * n;
 
-  if (idx < total_a) {
-    size_t a_idx = idx;
-    uint8_t packed = a_fp4[a_idx / 2];
-    a_fp16[idx] = fp4_to_fp16(packed, a_idx % 2);
+  constexpr int kUnrollFactor = 4;
+
+  if (idx * kUnrollFactor < total_a) {
+    #pragma unroll
+    for (int u = 0; u < kUnrollFactor; ++u) {
+      size_t a_idx = idx * kUnrollFactor + u;
+      if (a_idx < total_a) {
+        uint8_t packed = a_fp4[a_idx / 2];
+        a_fp16[a_idx] = fp4_to_fp16(packed, a_idx % 2);
+      }
+    }
   }
 
-  if (idx < total_b) {
-    size_t b_idx = idx;
-    uint8_t packed = b_fp4[b_idx / 2];
-    b_fp16[idx] = fp4_to_fp16(packed, b_idx % 2);
+  if (idx * kUnrollFactor < total_b) {
+    #pragma unroll
+    for (int u = 0; u < kUnrollFactor; ++u) {
+      size_t b_idx = idx * kUnrollFactor + u;
+      if (b_idx < total_b) {
+        uint8_t packed = b_fp4[b_idx / 2];
+        b_fp16[b_idx] = fp4_to_fp16(packed, b_idx % 2);
+      }
+    }
   }
 }
 
@@ -322,35 +334,38 @@ void TensorCore::setup(BenchmarkContext& ctx, const std::map<std::string, std::s
 }
 
 void TensorCore::run_warmup(BenchmarkContext& ctx, const std::map<std::string, std::string>& params) {
-  dim3 block(32, 8);
+  constexpr int kWarpSize = 32;
+  constexpr int kWarpM = 8;
+  constexpr int kUnpackBlockSize = 256;
+  dim3 block(kWarpSize, kWarpM);
   dim3 grid(((n_ + 15) / 16 + 3) / 4, ((m_ + 15) / 16 + 1) / 2);
 
   for (int i = 0; i < 5; ++i) {
     switch (dtype_) {
       case DataType::Float4:
-        tensor_core_fp4_unpack_kernel<<<(m_ * k_ + 255) / 256, 256, 0, ctx.streams[0]->get()>>>(
-            static_cast<uint8_t*>(d_a_), static_cast<uint8_t*>(d_b_),
+        tensor_core_fp4_unpack_kernel<<<(m_ * k_ + 255) / 256, kUnpackBlockSize, 0, ctx.streams[0]->get()>>>(
+            static_cast<const uint8_t*>(d_a_), static_cast<const uint8_t*>(d_b_),
             static_cast<half*>(d_a_temp_), static_cast<half*>(d_b_temp_),
             m_, n_, k_);
         tensor_core_fp4_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
-            static_cast<uint8_t*>(d_a_), static_cast<uint8_t*>(d_b_),
+            static_cast<const uint8_t*>(d_a_), static_cast<const uint8_t*>(d_b_),
             static_cast<half*>(d_a_temp_), static_cast<half*>(d_b_temp_),
             static_cast<float*>(d_c_), m_, n_, k_, gemm_iters_);
         break;
       case DataType::Int8:
         tensor_core_int8_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
-            static_cast<int8_t*>(d_a_), static_cast<int8_t*>(d_b_),
+            static_cast<const int8_t*>(d_a_), static_cast<const int8_t*>(d_b_),
             static_cast<int32_t*>(d_c_), m_, n_, k_, gemm_iters_);
         break;
       case DataType::BFloat16:
         tensor_core_bf16_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
-            static_cast<__nv_bfloat16*>(d_a_), static_cast<__nv_bfloat16*>(d_b_),
+            static_cast<const __nv_bfloat16*>(d_a_), static_cast<const __nv_bfloat16*>(d_b_),
             static_cast<float*>(d_c_), m_, n_, k_, gemm_iters_);
         break;
       case DataType::Float16:
       default:
         tensor_core_fp16_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
-            static_cast<half*>(d_a_), static_cast<half*>(d_b_),
+            static_cast<const half*>(d_a_), static_cast<const half*>(d_b_),
             static_cast<float*>(d_c_), m_, n_, k_, gemm_iters_);
         break;
     }
@@ -372,7 +387,10 @@ BenchmarkResult TensorCore::run_measure(BenchmarkContext& ctx, const std::map<st
 
   int iters = std::stoi(get_param("iters", "200"));
 
-  dim3 block(32, 8);
+  constexpr int kWarpSize = 32;
+  constexpr int kWarpM = 8;
+  constexpr int kUnpackBlockSize = 256;
+  dim3 block(kWarpSize, kWarpM);
   dim3 grid(((n_ + 15) / 16 + 3) / 4, ((m_ + 15) / 16 + 1) / 2);
 
   EventTimer timer(ctx.streams[0]->get());
@@ -383,29 +401,29 @@ BenchmarkResult TensorCore::run_measure(BenchmarkContext& ctx, const std::map<st
 
     switch (dtype_) {
       case DataType::Float4:
-        tensor_core_fp4_unpack_kernel<<<(m_ * k_ + 255) / 256, 256, 0, ctx.streams[0]->get()>>>(
-            static_cast<uint8_t*>(d_a_), static_cast<uint8_t*>(d_b_),
+        tensor_core_fp4_unpack_kernel<<<(m_ * k_ + 255) / 256, kUnpackBlockSize, 0, ctx.streams[0]->get()>>>(
+            static_cast<const uint8_t*>(d_a_), static_cast<const uint8_t*>(d_b_),
             static_cast<half*>(d_a_temp_), static_cast<half*>(d_b_temp_),
             m_, n_, k_);
         tensor_core_fp4_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
-            static_cast<uint8_t*>(d_a_), static_cast<uint8_t*>(d_b_),
+            static_cast<const uint8_t*>(d_a_), static_cast<const uint8_t*>(d_b_),
             static_cast<half*>(d_a_temp_), static_cast<half*>(d_b_temp_),
             static_cast<float*>(d_c_), m_, n_, k_, gemm_iters_);
         break;
       case DataType::Int8:
         tensor_core_int8_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
-            static_cast<int8_t*>(d_a_), static_cast<int8_t*>(d_b_),
+            static_cast<const int8_t*>(d_a_), static_cast<const int8_t*>(d_b_),
             static_cast<int32_t*>(d_c_), m_, n_, k_, gemm_iters_);
         break;
       case DataType::BFloat16:
         tensor_core_bf16_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
-            static_cast<__nv_bfloat16*>(d_a_), static_cast<__nv_bfloat16*>(d_b_),
+            static_cast<const __nv_bfloat16*>(d_a_), static_cast<const __nv_bfloat16*>(d_b_),
             static_cast<float*>(d_c_), m_, n_, k_, gemm_iters_);
         break;
       case DataType::Float16:
       default:
         tensor_core_fp16_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
-            static_cast<half*>(d_a_), static_cast<half*>(d_b_),
+            static_cast<const half*>(d_a_), static_cast<const half*>(d_b_),
             static_cast<float*>(d_c_), m_, n_, k_, gemm_iters_);
         break;
     }

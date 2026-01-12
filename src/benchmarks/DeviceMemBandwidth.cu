@@ -9,14 +9,16 @@
 
 namespace perfcli {
 
-__global__ void __launch_bounds__(256, 2) read_kernel(float* __restrict__ data, size_t n, int iters) {
+__global__ void __launch_bounds__(256, 2) read_kernel(const float* __restrict__ data, size_t n, int iters) {
   const size_t idx = (blockIdx.x * blockDim.x + threadIdx.x) * 4;
-  if (idx + 4 > n) return;
+  const size_t stride = (gridDim.x * blockDim.x * 4);
+  if (idx >= n) return;
 
   float4 sum4 = *reinterpret_cast<const float4*>(&data[idx]);
 
+  #pragma unroll
   for (int i = 0; i < iters; ++i) {
-    const size_t read_idx = (idx + (i * 4)) % n;
+    const size_t read_idx = (idx + i * stride) % n;
     const float4 val4 = *reinterpret_cast<const float4*>(&data[read_idx]);
     sum4.x += val4.x;
     sum4.y += val4.y;
@@ -37,7 +39,8 @@ __global__ void __launch_bounds__(256, 2) copy_kernel(float* __restrict__ dst, c
   const size_t idx = (blockIdx.x * blockDim.x + threadIdx.x) * 4;
   if (idx + 4 > n) return;
 
-  *reinterpret_cast<float4*>(&dst[idx]) = *reinterpret_cast<const float4*>(&src[idx]);
+  float4 val4 = *reinterpret_cast<const float4*>(&src[idx]);
+  *reinterpret_cast<float4*>(&dst[idx]) = val4;
 }
 
 BenchmarkSpec DeviceMemBandwidth::metadata() const {
@@ -145,16 +148,16 @@ BenchmarkResult DeviceMemBandwidth::run_measure(BenchmarkContext& ctx, const std
 
 void DeviceMemBandwidth::run_read_only(BenchmarkContext& ctx, int iters, std::vector<double>& samples_us) {
   size_t n = size_ / sizeof(float);
-  constexpr int block_size = 256;
-  int grid_size = ((n / 4) + block_size - 1) / block_size;
+  constexpr int kBlockSize = 256;
+  int grid_size = ((n / 4) + kBlockSize - 1) / kBlockSize;
 
   EventTimer timer(ctx.streams[0]->get());
 
   for (int i = 0; i < iters; ++i) {
     timer.start();
 
-    read_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
-        static_cast<float*>(d_src_), n, 1);
+    read_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
+        static_cast<const float*>(d_src_), n, 1);
 
     timer.stop();
     timer.sync();
@@ -166,17 +169,17 @@ void DeviceMemBandwidth::run_read_only(BenchmarkContext& ctx, int iters, std::ve
 
 void DeviceMemBandwidth::run_write_only(BenchmarkContext& ctx, int iters, std::vector<double>& samples_us) {
   size_t n = size_ / sizeof(float);
-  constexpr int block_size = 256;
-  int grid_size = ((n / 4) + block_size - 1) / block_size;
-  constexpr float4 write_val = {1.0f, 1.0f, 1.0f, 1.0f};
+  constexpr int kBlockSize = 256;
+  constexpr float4 kWriteVal = {1.0f, 1.0f, 1.0f, 1.0f};
+  int grid_size = ((n / 4) + kBlockSize - 1) / kBlockSize;
 
   EventTimer timer(ctx.streams[0]->get());
 
   for (int i = 0; i < iters; ++i) {
     timer.start();
 
-    write_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
-        static_cast<float*>(d_src_), n, write_val);
+    write_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
+        static_cast<float*>(d_src_), n, kWriteVal);
 
     timer.stop();
     timer.sync();
@@ -188,16 +191,16 @@ void DeviceMemBandwidth::run_write_only(BenchmarkContext& ctx, int iters, std::v
 
 void DeviceMemBandwidth::run_read_write(BenchmarkContext& ctx, int iters, std::vector<double>& samples_us) {
   size_t n = size_ / sizeof(float);
-  constexpr int block_size = 256;
-  int grid_size = ((n / 4) + block_size - 1) / block_size;
+  constexpr int kBlockSize = 256;
+  int grid_size = ((n / 4) + kBlockSize - 1) / kBlockSize;
 
   EventTimer timer(ctx.streams[0]->get());
 
   for (int i = 0; i < iters; ++i) {
     timer.start();
 
-    copy_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
-        static_cast<float*>(d_dst_), static_cast<float*>(d_src_), n);
+    copy_kernel<<<grid_size, kBlockSize, 0, ctx.streams[0]->get()>>>(
+        static_cast<float*>(d_dst_), static_cast<const float*>(d_src_), n);
 
     timer.stop();
     timer.sync();

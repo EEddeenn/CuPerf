@@ -11,7 +11,10 @@ Stream::Stream(cudaStream_t stream) : stream_(stream), is_external_(true) {}
 
 Stream::~Stream() {
   if (!is_external_ && stream_) {
-    cudaStreamDestroy(stream_);
+    cudaError_t err = cudaStreamDestroy(stream_);
+    if (err != cudaSuccess) {
+      (void)err;
+    }
   }
 }
 
@@ -35,7 +38,9 @@ Stream& Stream::operator=(Stream&& other) noexcept {
 }
 
 void Stream::sync() const {
-  CUDA_CHECK(cudaStreamSynchronize(stream_));
+  if (stream_) {
+    CUDA_CHECK(cudaStreamSynchronize(stream_));
+  }
 }
 
 Event::Event() : event_(nullptr) {
@@ -48,7 +53,10 @@ Event::Event(unsigned int flags) : event_(nullptr) {
 
 Event::~Event() {
   if (event_) {
-    cudaEventDestroy(event_);
+    cudaError_t err = cudaEventDestroy(event_);
+    if (err != cudaSuccess) {
+      (void)err;
+    }
   }
 }
 

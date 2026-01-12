@@ -42,7 +42,7 @@ cmake --build build-debug --parallel $(nproc)
 ### Build Options
 
 ```bash
-# Disable NVML support (default: auto-detect)
+# NVML support (default: ON, but not yet implemented)
 cmake -B build -DPERFCLI_ENABLE_NVML=OFF
 
 # Enable CSV output format
@@ -513,7 +513,7 @@ See `AGENTS.md` for coding guidelines and development instructions.
 
 ## Changelog
 
-### v0.5.0 (2025-01-12) - FP4 & BF16 Tensor Core Support
+### v0.5.0 (2026-01-12) - FP4 & BF16 Tensor Core Support
 
 **New Features**
 - Added **FP4 (4-bit float)** support to `compute` benchmark
@@ -548,7 +548,7 @@ See `AGENTS.md` for coding guidelines and development instructions.
 - Updated dtype options in all benchmark examples
 - Added tensor core data type requirements
 
-### v0.4.0 (2025-01-12) - Kernel Optimization & Bug Fixes
+### v0.4.0 (2026-01-12) - Kernel Optimization & Bug Fixes
 
 **Critical Bug Fixes**
 - Fixed Tensor Core kernels: Corrected block/warp mapping (32x8 blocks with 2x4 warp layout)
@@ -578,7 +578,7 @@ See `AGENTS.md` for coding guidelines and development instructions.
 - Fixed signed/unsigned comparison warning in int8_kernel
 - All benchmarks now pass verification mode
 
-### v0.3.0 (2025-01-12) - Tensor Core Support
+### v0.3.0 (2026-01-12) - Tensor Core Support
 
 **New Features**
 - Added `tensor_core` benchmark for WMMA-based GEMM performance
@@ -592,7 +592,7 @@ See `AGENTS.md` for coding guidelines and development instructions.
 - Updated DESIGN.md with tensor core implementation status
 - Fixed test failures in `test_statistics.cpp` and `test_types.cpp`
 
-### v0.2.0 (2025-01-11) - Performance & Modernization Update
+### v0.2.0 (2026-01-11) - Performance & Modernization Update
 
 **CUDA Kernel Improvements**
 - Reduction kernel: Added inline `warp_reduce_sum()` device function

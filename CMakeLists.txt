@@ -16,6 +16,13 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+if(POLICY CMP0146)
+  cmake_policy(SET CMP0146 NEW)
+endif()
+
+find_package(CUDAToolkit REQUIRED)
+include_directories(${CUDAToolkit_INCLUDE_DIRS})
+
 include(cmake/Options.cmake)
 
 include(FetchContent)
@@ -49,7 +56,6 @@ endif()
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/src
-  /usr/local/cuda-13.1/targets/x86_64-linux/include
 )
 
 file(GLOB_RECURSE PERFCLI_CXX_SOURCES

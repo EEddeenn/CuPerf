@@ -42,17 +42,19 @@ BenchmarkResult Runner::execute_single_case(const RunPlan::CaseConfig& config_ca
   result.benchmark_name = config_case.benchmark_name;
   result.params = config_case.params;
   result.device_index = config_.device_index;
-  result.success = false;
+  result.success = true;
 
   auto benchmark = BenchmarkRegistry::instance().create(config_case.benchmark_name);
   if (!benchmark) {
     result.warnings.push_back("Benchmark not found: " + config_case.benchmark_name);
+    result.success = false;
     return result;
   }
 
   auto gpu_info = device_manager_.get_device_info(config_.device_index);
   if (!benchmark->is_supported(gpu_info)) {
     result.warnings.push_back("Benchmark not supported on this GPU");
+    result.success = false;
     return result;
   }
 
@@ -62,22 +64,21 @@ BenchmarkResult Runner::execute_single_case(const RunPlan::CaseConfig& config_ca
     benchmark->setup(ctx, config_case.params);
     benchmark->run_warmup(ctx, config_case.params);
     result = benchmark->run_measure(ctx, config_case.params);
+    result.success = true;
 
     if (config_.verify_results) {
       bool verified = benchmark->verify_result(ctx);
       if (!verified) {
         result.warnings.push_back("Verification failed");
-      } else {
-        result.success = true;
+        result.success = false;
       }
-    } else {
-      result.success = true;
     }
 
     benchmark->teardown(ctx);
   } catch (const std::exception& e) {
     benchmark->teardown(ctx);
     result.warnings.push_back(std::string("Execution failed: ") + e.what());
+    result.success = false;
   }
 
   return result;

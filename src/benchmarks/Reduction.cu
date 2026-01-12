@@ -118,22 +118,22 @@ void Reduction::setup(BenchmarkContext& ctx, const std::map<std::string, std::st
   CUDA_CHECK(cudaMalloc(&d_data_, size_));
   CUDA_CHECK(cudaMemset(d_data_, 1, size_));
 
-  constexpr int block_size = 512;
-  int grid_size = (num_elements_ + block_size * 2 - 1) / (block_size * 2);
+  constexpr int kBlockSize = 512;
+  int grid_size = (num_elements_ + kBlockSize * 2 - 1) / (kBlockSize * 2);
 
   CUDA_CHECK(cudaMalloc(&d_partial_sums_, grid_size * sizeof(float)));
   CUDA_CHECK(cudaMalloc(&d_result_, sizeof(float)));
 }
 
 void Reduction::run_warmup(BenchmarkContext& ctx, const std::map<std::string, std::string>& params) {
-  constexpr int block_size = 512;
-  int grid_size = (num_elements_ + block_size * 2 - 1) / (block_size * 2);
+  constexpr int kBlockSize = 512;
+  int grid_size = (num_elements_ + kBlockSize * 2 - 1) / (kBlockSize * 2);
 
   for (int i = 0; i < 5; ++i) {
-    reduction_kernel<<<grid_size, block_size, block_size * sizeof(float), ctx.streams[0]->get()>>>(
+    reduction_kernel<<<grid_size, kBlockSize, kBlockSize * sizeof(float), ctx.streams[0]->get()>>>(
         static_cast<float*>(d_data_), static_cast<float*>(d_partial_sums_), num_elements_);
 
-    final_reduction_kernel<<<1, block_size, block_size * sizeof(float), ctx.streams[0]->get()>>>(
+    final_reduction_kernel<<<1, kBlockSize, kBlockSize * sizeof(float), ctx.streams[0]->get()>>>(
         static_cast<float*>(d_partial_sums_), static_cast<float*>(d_result_), grid_size);
   }
   ctx.streams[0]->sync();
@@ -153,8 +153,8 @@ BenchmarkResult Reduction::run_measure(BenchmarkContext& ctx, const std::map<std
 
   int iters = std::stoi(get_param("iters", "200"));
 
-  int block_size = 512;
-  int grid_size = (num_elements_ + block_size * 2 - 1) / (block_size * 2);
+  constexpr int kBlockSize = 512;
+  int grid_size = (num_elements_ + kBlockSize * 2 - 1) / (kBlockSize * 2);
 
   EventTimer timer(ctx.streams[0]->get());
   std::vector<double> samples_us;
@@ -162,10 +162,10 @@ BenchmarkResult Reduction::run_measure(BenchmarkContext& ctx, const std::map<std
   for (int i = 0; i < iters; ++i) {
     timer.start();
 
-    reduction_kernel<<<grid_size, block_size, block_size * sizeof(float), ctx.streams[0]->get()>>>(
+    reduction_kernel<<<grid_size, kBlockSize, kBlockSize * sizeof(float), ctx.streams[0]->get()>>>(
         static_cast<float*>(d_data_), static_cast<float*>(d_partial_sums_), num_elements_);
 
-    final_reduction_kernel<<<1, block_size, block_size * sizeof(float), ctx.streams[0]->get()>>>(
+    final_reduction_kernel<<<1, kBlockSize, kBlockSize * sizeof(float), ctx.streams[0]->get()>>>(
         static_cast<float*>(d_partial_sums_), static_cast<float*>(d_result_), grid_size);
 
     timer.stop();

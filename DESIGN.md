@@ -3,7 +3,7 @@
 This document describes a detailed, implementation-ready architecture for a **CUDA performance test program** built as a **CLI tool** using **modern CUDA** (CUDA 13.1 by default) and **modern C++** (C++23 by default). It is written to be "coding-agent friendly": clear components, responsibilities, file layout, interfaces, and step-by-step milestones.
 
 > **Status**: ✅ Fully implemented, tested, and optimized
-> Last updated: 2025-01-12
+> Last updated: 2026-01-12
 
 ---
 
@@ -387,19 +387,21 @@ Store raw samples and compute robust summaries:
 
 ### Phase 2 (completed)
 6. **TensorCore**
-    - WMMA-based GEMM (tensor cores)
-    - FP16 matrix multiply (16x16x16 tiles) - CC 7.0+
-    - BF16 matrix multiply (16x16x16 tiles) - CC 8.0+
-    - INT8 matrix multiply (16x16x16 tiles) - CC 7.2+
-    - FP4 matrix multiply (packed storage, uses FP16 tensor ops)
-    - metric: TFLOP/s or TOPS
-    - requires CC 7.0+ (tensor cores)
-    - diagnostic, not a cuBLAS competitor
+     - WMMA-based GEMM (tensor cores)
+     - FP16 matrix multiply (16x16x16 tiles) - CC 7.0+
+     - BF16 matrix multiply (16x16x16 tiles) - CC 8.0+
+     - INT8 matrix multiply (16x16x16 tiles) - CC 7.2+
+     - FP4 matrix multiply (packed storage, uses FP16 tensor ops)
+     - metric: TFLOP/s or TOPS
+     - requires CC 7.0+ (tensor cores)
+     - diagnostic, not a cuBLAS competitor
 
+### Phase 2 (not implemented)
 7. **MultiGPU Peer Copy**
-   - peer bandwidth/latency across GPUs
-   - handle NVLink vs PCIe differences
-   - metric: GB/s and µs
+    - peer bandwidth/latency across GPUs
+    - handle NVLink vs PCIe differences
+    - metric: GB/s and µs
+    - **Status**: Not yet implemented (future work)
 
 ---
 

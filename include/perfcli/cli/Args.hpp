@@ -30,7 +30,6 @@ private:
   Command command_;
   RunConfig config_;
   std::vector<std::string> benchmarks_;
-  std::map<std::string, std::string> params_;
 };
 
 }
