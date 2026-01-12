@@ -51,8 +51,8 @@ Args Args::parse(int argc, char* argv[]) {
   run_cmd->add_option("--tag", config.tag_filter, "Filter benchmarks by tag (memory|compute|latency|multi-gpu)");
 
   std::string dtype_str = "fp32";
-  run_cmd->add_option("--dtype", dtype_str, "Data type (fp32|fp16|bf16|int8|int32)")
-      ->check(CLI::IsMember({"fp32", "fp16", "bf16", "int8", "int32"}));
+  run_cmd->add_option("--dtype", dtype_str, "Data type (fp32|fp16|bf16|int8|int32|fp4)")
+      ->check(CLI::IsMember({"fp32", "fp16", "bf16", "int8", "int32", "fp4"}));
 
   std::string direction_str = "H2D";
   run_cmd->add_option("--direction", direction_str, "Copy direction (H2D|D2H|D2D)")

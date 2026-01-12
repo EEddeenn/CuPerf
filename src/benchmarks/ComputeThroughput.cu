@@ -91,6 +91,27 @@ __global__ void __launch_bounds__(256, 2) int8_kernel(int8_t* __restrict__ data,
   data[idx] = static_cast<int8_t>(sum);
 }
 
+__global__ void __launch_bounds__(256, 2) fp4_kernel(uint8_t* __restrict__ data, size_t n, int iters) {
+  const size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= n) return;
+
+  uint8_t packed = data[idx];
+  int8_t val0 = (packed & 0x0F);
+  int8_t val1 = (packed >> 4);
+  constexpr int8_t a = 7;
+  constexpr int8_t b = 1;
+
+  for (int i = 0; i < iters; ++i) {
+#pragma unroll
+    for (int j = 0; j < 16; ++j) {
+      val0 = (val0 * a) + b;
+      val1 = (val1 * a) + b;
+    }
+  }
+
+  data[idx] = (static_cast<uint8_t>(val1 & 0x0F) << 4) | (static_cast<uint8_t>(val0 & 0x0F));
+}
+
 BenchmarkSpec ComputeThroughput::metadata() const {
   BenchmarkSpec spec;
   spec.name = "compute";
@@ -102,7 +123,7 @@ BenchmarkSpec ComputeThroughput::metadata() const {
     {"iters", "10"}
   };
   spec.tags = {BenchmarkTag::Compute};
-  spec.supported_types = {DataType::Float32, DataType::Float16, DataType::BFloat16, DataType::Int8};
+  spec.supported_types = {DataType::Float32, DataType::Float16, DataType::BFloat16, DataType::Int8, DataType::Float4};
   return spec;
 }
 
@@ -169,6 +190,10 @@ void ComputeThroughput::run_warmup(BenchmarkContext& ctx, const std::map<std::st
         int8_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
             static_cast<int8_t*>(d_data_), elem_count, iters_per_launch_);
         break;
+      case DataType::Float4:
+        fp4_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+            static_cast<uint8_t*>(d_data_), elem_count, iters_per_launch_);
+        break;
       case DataType::Float32:
       default:
         fma_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
@@ -224,6 +249,10 @@ BenchmarkResult ComputeThroughput::run_measure(BenchmarkContext& ctx, const std:
         int8_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
             static_cast<int8_t*>(d_data_), elem_count, iters_per_launch_);
         break;
+      case DataType::Float4:
+        fp4_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
+            static_cast<uint8_t*>(d_data_), elem_count, iters_per_launch_);
+        break;
       case DataType::Float32:
       default:
         fma_kernel<<<grid_size, block_size, 0, ctx.streams[0]->get()>>>(
@@ -252,6 +281,13 @@ BenchmarkResult ComputeThroughput::run_measure(BenchmarkContext& ctx, const std:
       double total_ops = static_cast<double>(elem_count) * iters_per_launch_ * 16 * 7;
       double tops = total_ops / (stats.median / 1e6) / 1e12;
       result.metrics["tops"] = tops;
+      break;
+    }
+    case DataType::Float4: {
+      double total_ops = static_cast<double>(elem_count) * 2 * iters_per_launch_ * 16 * 2;
+      double tflops = total_ops / (stats.median / 1e6) / 1e12;
+      result.metrics["tflops"] = tflops;
+      result.metrics["tops"] = tflops * 1000.0;
       break;
     }
     case DataType::Float16:

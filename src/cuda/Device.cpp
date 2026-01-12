@@ -96,15 +96,23 @@ GpuInfo DeviceManager::get_device_info(int device_index) const {
 
   char uuid_str[128];
   snprintf(uuid_str, sizeof(uuid_str),
-           "%08x-%04x-%04x-%04x-%04x%08x",
-           (unsigned int)(prop.uuid.bytes[0] << 24 | prop.uuid.bytes[1] << 16 |
-                          prop.uuid.bytes[2] << 8 | prop.uuid.bytes[3]),
-           (unsigned int)(prop.uuid.bytes[4] << 8 | prop.uuid.bytes[5]),
-           (unsigned int)(prop.uuid.bytes[6] << 8 | prop.uuid.bytes[7]),
-           (unsigned int)(prop.uuid.bytes[8] << 8 | prop.uuid.bytes[9]),
-           (unsigned int)(prop.uuid.bytes[8] << 8 | prop.uuid.bytes[9]),
-           (unsigned int)(prop.uuid.bytes[10] << 24 | prop.uuid.bytes[11] << 16 |
-                          prop.uuid.bytes[12] << 8 | prop.uuid.bytes[13]));
+           "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+           static_cast<unsigned char>(prop.uuid.bytes[0]),
+           static_cast<unsigned char>(prop.uuid.bytes[1]),
+           static_cast<unsigned char>(prop.uuid.bytes[2]),
+           static_cast<unsigned char>(prop.uuid.bytes[3]),
+           static_cast<unsigned char>(prop.uuid.bytes[4]),
+           static_cast<unsigned char>(prop.uuid.bytes[5]),
+           static_cast<unsigned char>(prop.uuid.bytes[6]),
+           static_cast<unsigned char>(prop.uuid.bytes[7]),
+           static_cast<unsigned char>(prop.uuid.bytes[8]),
+           static_cast<unsigned char>(prop.uuid.bytes[9]),
+           static_cast<unsigned char>(prop.uuid.bytes[10]),
+           static_cast<unsigned char>(prop.uuid.bytes[11]),
+           static_cast<unsigned char>(prop.uuid.bytes[12]),
+           static_cast<unsigned char>(prop.uuid.bytes[13]),
+           static_cast<unsigned char>(prop.uuid.bytes[14]),
+           static_cast<unsigned char>(prop.uuid.bytes[15]));
   info.uuid = uuid_str;
 
   info.pci_bus_id = prop.pciBusID;

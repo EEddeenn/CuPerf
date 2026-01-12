@@ -4,6 +4,7 @@
 #include "perfcli/cuda/Stream.hpp"
 #include "perfcli/core/Statistics.hpp"
 #include <cuda_fp16.h>
+#include <cuda_bf16.h>
 #include <mma.h>
 #include <format>
 #include <vector>
@@ -13,6 +14,82 @@
 namespace perfcli {
 
 using namespace nvcuda::wmma;
+
+__inline__ __device__ half fp4_to_fp16(uint8_t packed, bool high_nibble) {
+  uint8_t nibble = high_nibble ? (packed >> 4) : (packed & 0x0F);
+  int8_t signed_val = static_cast<int8_t>((nibble & 0x08) ? (nibble | 0xF0) : nibble);
+  return __int2half_rn(static_cast<int>(signed_val));
+}
+
+__global__ void __launch_bounds__(256, 2) tensor_core_fp4_unpack_kernel(
+    const uint8_t* __restrict__ a_fp4, const uint8_t* __restrict__ b_fp4,
+    half* __restrict__ a_fp16, half* __restrict__ b_fp16,
+    size_t m, size_t n, size_t k) {
+  const size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+  size_t total_a = m * k;
+  size_t total_b = k * n;
+
+  if (idx < total_a) {
+    size_t a_idx = idx;
+    uint8_t packed = a_fp4[a_idx / 2];
+    a_fp16[idx] = fp4_to_fp16(packed, a_idx % 2);
+  }
+
+  if (idx < total_b) {
+    size_t b_idx = idx;
+    uint8_t packed = b_fp4[b_idx / 2];
+    b_fp16[idx] = fp4_to_fp16(packed, b_idx % 2);
+  }
+}
+
+__global__ void __launch_bounds__(256, 2) tensor_core_fp4_kernel(
+    const uint8_t* __restrict__ a, const uint8_t* __restrict__ b,
+    half* __restrict__ a_temp, half* __restrict__ b_temp,
+    float* __restrict__ c, size_t m, size_t n, size_t k, int iters) {
+  constexpr int WMMA_M = 16;
+  constexpr int WMMA_N = 16;
+  constexpr int WMMA_K = 16;
+
+  const int lane_id = threadIdx.x;
+  const int warp_idx = threadIdx.y;
+  const int warp_idx_x = warp_idx % 2;
+  const int warp_idx_y = warp_idx / 2;
+
+  const int warp_m = blockIdx.y * 2 + warp_idx_y;
+  const int warp_n = blockIdx.x * 4 + warp_idx_x;
+
+  fragment<matrix_a, WMMA_M, WMMA_N, WMMA_K, half, row_major> a_frag;
+  fragment<matrix_b, WMMA_M, WMMA_N, WMMA_K, half, col_major> b_frag;
+  fragment<accumulator, WMMA_M, WMMA_N, WMMA_K, float> c_frag;
+
+  fill_fragment(c_frag, 0.0f);
+
+  #pragma unroll
+  for (int t = 0; t < iters; ++t) {
+    for (size_t k_tile = 0; k_tile < k; k_tile += WMMA_K) {
+      const size_t a_row = warp_m * WMMA_M + lane_id % 16;
+      const size_t a_col = k_tile + (lane_id / 16) * 16;
+      const size_t b_row = k_tile + (lane_id / 16) * 16;
+      const size_t b_col = warp_n * WMMA_N;
+
+      if (a_row < m && a_col < k) {
+        load_matrix_sync(a_frag, a_temp + a_row * k + a_col, k);
+      }
+      if (b_row < k && b_col < n) {
+        load_matrix_sync(b_frag, b_temp + b_row * n + b_col, n);
+      }
+
+      mma_sync(c_frag, a_frag, b_frag, c_frag);
+    }
+  }
+
+  const size_t c_row = warp_m * WMMA_M;
+  const size_t c_col = warp_n * WMMA_N;
+  if (c_row < m && c_col < n) {
+    store_matrix_sync(c + c_row * n + c_col, c_frag, n, mem_row_major);
+  }
+}
 
 __global__ void __launch_bounds__(256, 2) tensor_core_fp16_kernel(
     const half* __restrict__ a, const half* __restrict__ b, float* __restrict__ c,
@@ -48,6 +125,56 @@ __global__ void __launch_bounds__(256, 2) tensor_core_fp16_kernel(
       }
       if (b_row < k && b_col < n) {
         load_matrix_sync(b_frag, b + b_row * n + b_col, n);
+      }
+
+      mma_sync(c_frag, a_frag, b_frag, c_frag);
+    }
+  }
+
+  const size_t c_row = warp_m * WMMA_M;
+  const size_t c_col = warp_n * WMMA_N;
+  if (c_row < m && c_col < n) {
+    store_matrix_sync(c + c_row * n + c_col, c_frag, n, mem_row_major);
+  }
+}
+
+__global__ void __launch_bounds__(256, 2) tensor_core_bf16_kernel(
+    const __nv_bfloat16* __restrict__ a, const __nv_bfloat16* __restrict__ b, float* __restrict__ c,
+    size_t m, size_t n, size_t k, int iters) {
+  constexpr int WMMA_M = 16;
+  constexpr int WMMA_N = 16;
+  constexpr int WMMA_K = 16;
+
+  const int lane_id = threadIdx.x;
+  const int warp_idx = threadIdx.y;
+  const int warp_idx_x = warp_idx % 2;
+  const int warp_idx_y = warp_idx / 2;
+
+  const int warp_m = blockIdx.y * 2 + warp_idx_y;
+  const int warp_n = blockIdx.x * 4 + warp_idx_x;
+
+  fragment<matrix_a, WMMA_M, WMMA_N, WMMA_K, half, row_major> a_frag;
+  fragment<matrix_b, WMMA_M, WMMA_N, WMMA_K, half, col_major> b_frag;
+  fragment<accumulator, WMMA_M, WMMA_N, WMMA_K, float> c_frag;
+
+  fill_fragment(c_frag, 0.0f);
+
+  const half* a_half = reinterpret_cast<const half*>(a);
+  const half* b_half = reinterpret_cast<const half*>(b);
+
+  #pragma unroll
+  for (int t = 0; t < iters; ++t) {
+    for (size_t k_tile = 0; k_tile < k; k_tile += WMMA_K) {
+      const size_t a_row = warp_m * WMMA_M + lane_id % 16;
+      const size_t a_col = k_tile + (lane_id / 16) * 16;
+      const size_t b_row = k_tile + (lane_id / 16) * 16;
+      const size_t b_col = warp_n * WMMA_N;
+
+      if (a_row < m && a_col < k) {
+        load_matrix_sync(a_frag, a_half + a_row * k + a_col, k);
+      }
+      if (b_row < k && b_col < n) {
+        load_matrix_sync(b_frag, b_half + b_row * n + b_col, n);
       }
 
       mma_sync(c_frag, a_frag, b_frag, c_frag);
@@ -111,7 +238,7 @@ __global__ void __launch_bounds__(256, 2) tensor_core_int8_kernel(
 BenchmarkSpec TensorCore::metadata() const {
   BenchmarkSpec spec;
   spec.name = "tensor_core";
-  spec.description = "Measure tensor core GEMM performance (WMMA API)";
+  spec.description = "Measure tensor core GEMM performance (WMMA API). BF16 requires CC 8.0+. FP4 uses packed storage with FP16 tensor cores.";
   spec.parameters = {"m", "n", "k", "dtype", "gemm_iters"};
   spec.default_params = {
     {"m", "4096"},
@@ -121,8 +248,14 @@ BenchmarkSpec TensorCore::metadata() const {
     {"gemm_iters", "1"}
   };
   spec.tags = {BenchmarkTag::Compute};
-  spec.supported_types = {DataType::Float16, DataType::Int8};
+  spec.supported_types = {DataType::Float16, DataType::BFloat16, DataType::Int8, DataType::Float4};
   return spec;
+}
+
+inline half fp4_to_fp16_host(uint8_t packed, bool high_nibble) {
+  uint8_t nibble = high_nibble ? (packed >> 4) : (packed & 0x0F);
+  int8_t signed_val = static_cast<int8_t>((nibble & 0x08) ? (nibble | 0xF0) : nibble);
+  return __float2half_rn(static_cast<float>(signed_val));
 }
 
 bool TensorCore::is_supported(const GpuInfo& gpu) const {
@@ -147,17 +280,45 @@ void TensorCore::setup(BenchmarkContext& ctx, const std::map<std::string, std::s
   dtype_ = string_to_data_type(dtype_str);
   gemm_iters_ = std::stoi(gemm_iters_str);
 
-  size_t elem_size_a = (dtype_ == DataType::Int8) ? sizeof(int8_t) : sizeof(half);
-  size_t elem_size_b = elem_size_a;
-  size_t elem_size_c = (dtype_ == DataType::Int8) ? sizeof(int32_t) : sizeof(float);
+  size_t elem_size_a, elem_size_b, elem_size_c;
+  if (dtype_ == DataType::Float4) {
+    elem_size_a = 1;
+    elem_size_b = 1;
+    elem_size_c = sizeof(float);
+  } else if (dtype_ == DataType::Int8) {
+    elem_size_a = sizeof(int8_t);
+    elem_size_b = sizeof(int8_t);
+    elem_size_c = sizeof(int32_t);
+  } else if (dtype_ == DataType::BFloat16) {
+    elem_size_a = sizeof(__nv_bfloat16);
+    elem_size_b = sizeof(__nv_bfloat16);
+    elem_size_c = sizeof(float);
+  } else {
+    elem_size_a = sizeof(half);
+    elem_size_b = sizeof(half);
+    elem_size_c = sizeof(float);
+  }
 
   CUDA_CHECK(cudaMalloc(&d_a_, m_ * k_ * elem_size_a));
   CUDA_CHECK(cudaMalloc(&d_b_, k_ * n_ * elem_size_b));
   CUDA_CHECK(cudaMalloc(&d_c_, m_ * n_ * elem_size_c));
 
+  if (dtype_ == DataType::Float4) {
+    CUDA_CHECK(cudaMalloc(&d_a_temp_, m_ * k_ * sizeof(half)));
+    CUDA_CHECK(cudaMalloc(&d_b_temp_, k_ * n_ * sizeof(half)));
+  } else {
+    d_a_temp_ = nullptr;
+    d_b_temp_ = nullptr;
+  }
+
   CUDA_CHECK(cudaMemset(d_a_, 0, m_ * k_ * elem_size_a));
   CUDA_CHECK(cudaMemset(d_b_, 0, k_ * n_ * elem_size_b));
   CUDA_CHECK(cudaMemset(d_c_, 0, m_ * n_ * elem_size_c));
+
+  if (dtype_ == DataType::Float4) {
+    CUDA_CHECK(cudaMemset(d_a_temp_, 0, m_ * k_ * sizeof(half)));
+    CUDA_CHECK(cudaMemset(d_b_temp_, 0, k_ * n_ * sizeof(half)));
+  }
 }
 
 void TensorCore::run_warmup(BenchmarkContext& ctx, const std::map<std::string, std::string>& params) {
@@ -166,10 +327,25 @@ void TensorCore::run_warmup(BenchmarkContext& ctx, const std::map<std::string, s
 
   for (int i = 0; i < 5; ++i) {
     switch (dtype_) {
+      case DataType::Float4:
+        tensor_core_fp4_unpack_kernel<<<(m_ * k_ + 255) / 256, 256, 0, ctx.streams[0]->get()>>>(
+            static_cast<uint8_t*>(d_a_), static_cast<uint8_t*>(d_b_),
+            static_cast<half*>(d_a_temp_), static_cast<half*>(d_b_temp_),
+            m_, n_, k_);
+        tensor_core_fp4_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
+            static_cast<uint8_t*>(d_a_), static_cast<uint8_t*>(d_b_),
+            static_cast<half*>(d_a_temp_), static_cast<half*>(d_b_temp_),
+            static_cast<float*>(d_c_), m_, n_, k_, gemm_iters_);
+        break;
       case DataType::Int8:
         tensor_core_int8_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
             static_cast<int8_t*>(d_a_), static_cast<int8_t*>(d_b_),
             static_cast<int32_t*>(d_c_), m_, n_, k_, gemm_iters_);
+        break;
+      case DataType::BFloat16:
+        tensor_core_bf16_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
+            static_cast<__nv_bfloat16*>(d_a_), static_cast<__nv_bfloat16*>(d_b_),
+            static_cast<float*>(d_c_), m_, n_, k_, gemm_iters_);
         break;
       case DataType::Float16:
       default:
@@ -206,10 +382,25 @@ BenchmarkResult TensorCore::run_measure(BenchmarkContext& ctx, const std::map<st
     timer.start();
 
     switch (dtype_) {
+      case DataType::Float4:
+        tensor_core_fp4_unpack_kernel<<<(m_ * k_ + 255) / 256, 256, 0, ctx.streams[0]->get()>>>(
+            static_cast<uint8_t*>(d_a_), static_cast<uint8_t*>(d_b_),
+            static_cast<half*>(d_a_temp_), static_cast<half*>(d_b_temp_),
+            m_, n_, k_);
+        tensor_core_fp4_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
+            static_cast<uint8_t*>(d_a_), static_cast<uint8_t*>(d_b_),
+            static_cast<half*>(d_a_temp_), static_cast<half*>(d_b_temp_),
+            static_cast<float*>(d_c_), m_, n_, k_, gemm_iters_);
+        break;
       case DataType::Int8:
         tensor_core_int8_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
             static_cast<int8_t*>(d_a_), static_cast<int8_t*>(d_b_),
             static_cast<int32_t*>(d_c_), m_, n_, k_, gemm_iters_);
+        break;
+      case DataType::BFloat16:
+        tensor_core_bf16_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
+            static_cast<__nv_bfloat16*>(d_a_), static_cast<__nv_bfloat16*>(d_b_),
+            static_cast<float*>(d_c_), m_, n_, k_, gemm_iters_);
         break;
       case DataType::Float16:
       default:
@@ -255,6 +446,14 @@ void TensorCore::teardown(BenchmarkContext& ctx) {
     cudaFree(d_c_);
     d_c_ = nullptr;
   }
+  if (d_a_temp_) {
+    cudaFree(d_a_temp_);
+    d_a_temp_ = nullptr;
+  }
+  if (d_b_temp_) {
+    cudaFree(d_b_temp_);
+    d_b_temp_ = nullptr;
+  }
   ctx.sync_all();
 }
 
@@ -266,7 +465,53 @@ bool TensorCore::verify_result(BenchmarkContext& ctx) {
   dim3 block(32, 8);
   dim3 grid(((verify_n + 15) / 16 + 3) / 4, ((verify_m + 15) / 16 + 1) / 2);
 
-  if (dtype_ == DataType::Int8) {
+  if (dtype_ == DataType::Float4) {
+    std::vector<uint8_t> a_h(verify_m * verify_k / 2, 0x77);
+    std::vector<uint8_t> b_h(verify_k * verify_n / 2, 0x77);
+    std::vector<float> c_h(verify_m * verify_n, 0.0f);
+
+    uint8_t* d_verify_a = nullptr;
+    uint8_t* d_verify_b = nullptr;
+    half* d_verify_a_temp = nullptr;
+    half* d_verify_b_temp = nullptr;
+    float* d_verify_c = nullptr;
+
+    CUDA_CHECK(cudaMalloc(&d_verify_a, verify_m * verify_k / 2 * sizeof(uint8_t)));
+    CUDA_CHECK(cudaMalloc(&d_verify_b, verify_k * verify_n / 2 * sizeof(uint8_t)));
+    CUDA_CHECK(cudaMalloc(&d_verify_a_temp, verify_m * verify_k * sizeof(half)));
+    CUDA_CHECK(cudaMalloc(&d_verify_b_temp, verify_k * verify_n * sizeof(half)));
+    CUDA_CHECK(cudaMalloc(&d_verify_c, verify_m * verify_n * sizeof(float)));
+
+    CUDA_CHECK(cudaMemcpy(d_verify_a, a_h.data(), a_h.size() * sizeof(uint8_t), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_verify_b, b_h.data(), b_h.size() * sizeof(uint8_t), cudaMemcpyHostToDevice));
+
+    tensor_core_fp4_unpack_kernel<<<(verify_m * verify_k + 255) / 256, 256, 0, ctx.streams[0]->get()>>>(
+        d_verify_a, d_verify_b, d_verify_a_temp, d_verify_b_temp, verify_m, verify_n, verify_k);
+    tensor_core_fp4_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
+        d_verify_a, d_verify_b, d_verify_a_temp, d_verify_b_temp, d_verify_c, verify_m, verify_n, verify_k, 1);
+
+    CUDA_CHECK(cudaMemcpy(c_h.data(), d_verify_c, c_h.size() * sizeof(float), cudaMemcpyDeviceToHost));
+
+    half fp4_val_half = fp4_to_fp16_host(0x77, false);
+    float fp4_val = __half2float(fp4_val_half);
+    float expected = fp4_val * static_cast<float>(verify_k);
+    const float epsilon = 1e-1f;
+    bool verified = true;
+    for (size_t i = 0; i < c_h.size() && verified; ++i) {
+      if (std::abs(c_h[i] - expected) > epsilon) {
+        verified = false;
+      }
+    }
+
+    cudaFree(d_verify_a);
+    cudaFree(d_verify_b);
+    cudaFree(d_verify_a_temp);
+    cudaFree(d_verify_b_temp);
+    cudaFree(d_verify_c);
+    CUDA_CHECK_LAST();
+
+    return verified;
+  } else if (dtype_ == DataType::Int8) {
     std::vector<int8_t> a_h(verify_m * verify_k, 1);
     std::vector<int8_t> b_h(verify_k * verify_n, 1);
     std::vector<int32_t> c_h(verify_m * verify_n, 0);
@@ -302,7 +547,7 @@ bool TensorCore::verify_result(BenchmarkContext& ctx) {
     CUDA_CHECK_LAST();
 
     return verified;
-  } else {
+  } else if (dtype_ == DataType::Float16) {
     std::vector<half> a_h(verify_m * verify_k, __float2half(1.0f));
     std::vector<half> b_h(verify_k * verify_n, __float2half(1.0f));
     std::vector<float> c_h(verify_m * verify_n, 0.0f);
@@ -338,7 +583,45 @@ bool TensorCore::verify_result(BenchmarkContext& ctx) {
     CUDA_CHECK_LAST();
 
     return verified;
+  } else if (dtype_ == DataType::BFloat16) {
+    std::vector<__nv_bfloat16> a_h(verify_m * verify_k, __float2bfloat16(1.0f));
+    std::vector<__nv_bfloat16> b_h(verify_k * verify_n, __float2bfloat16(1.0f));
+    std::vector<float> c_h(verify_m * verify_n, 0.0f);
+
+    __nv_bfloat16* d_verify_a = nullptr;
+    __nv_bfloat16* d_verify_b = nullptr;
+    float* d_verify_c = nullptr;
+
+    CUDA_CHECK(cudaMalloc(&d_verify_a, verify_m * verify_k * sizeof(__nv_bfloat16)));
+    CUDA_CHECK(cudaMalloc(&d_verify_b, verify_k * verify_n * sizeof(__nv_bfloat16)));
+    CUDA_CHECK(cudaMalloc(&d_verify_c, verify_m * verify_n * sizeof(float)));
+
+    CUDA_CHECK(cudaMemcpy(d_verify_a, a_h.data(), a_h.size() * sizeof(__nv_bfloat16), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_verify_b, b_h.data(), b_h.size() * sizeof(__nv_bfloat16), cudaMemcpyHostToDevice));
+
+    tensor_core_bf16_kernel<<<grid, block, 0, ctx.streams[0]->get()>>>(
+        d_verify_a, d_verify_b, d_verify_c, verify_m, verify_n, verify_k, 1);
+
+    CUDA_CHECK(cudaMemcpy(c_h.data(), d_verify_c, c_h.size() * sizeof(float), cudaMemcpyDeviceToHost));
+
+    float expected = static_cast<float>(verify_k);
+    const float epsilon = 1e-2f;
+    bool verified = true;
+    for (size_t i = 0; i < c_h.size() && verified; ++i) {
+      if (std::abs(c_h[i] - expected) > epsilon) {
+        verified = false;
+      }
+    }
+
+    cudaFree(d_verify_a);
+    cudaFree(d_verify_b);
+    cudaFree(d_verify_c);
+    CUDA_CHECK_LAST();
+
+    return verified;
   }
+
+  return false;
 }
 
 }

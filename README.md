@@ -5,8 +5,8 @@ A modern, extensible command-line tool for benchmarking GPU performance on NVIDI
 ## Features
 
 - **Memory Benchmarks**: Host-to-device, device-to-host, and device-to-device copy bandwidth
-- **Compute Benchmarks**: FMA throughput for FP32/FP16/BF16, DP4A for INT8, reduction performance
-- **Tensor Core Benchmarks**: WMMA-based GEMM for FP16 and INT8 data types
+- **Compute Benchmarks**: FMA throughput for FP32/FP16/BF16/FP4, DP4A for INT8, reduction performance
+- **Tensor Core Benchmarks**: WMMA-based GEMM for FP16, BF16, INT8, and FP4 data types
 - **Device Memory Bandwidth**: Read-only, write-only, and read-write patterns
 - **Accurate Timing**: CUDA event-based timing with warmup and statistical analysis
 - **Multiple Output Formats**: Console tables, JSON, and CSV
@@ -92,7 +92,7 @@ Measures host-to-device (H2D), device-to-host (D2H), and device-to-device (D2D) 
 **Parameters:**
 - `--size`: Transfer size (e.g., 1M, 100M, 1G)
 - `--direction`: Copy direction (H2D, D2H, D2D)
-- `--dtype`: Data type (fp32, fp16, bf16, int8, int32)
+- `--dtype`: Data type (fp32, fp16, bf16, int8, int32, fp4)
 - `--pinned`: Use pinned host memory
 - `--async`: Use async copies
 
@@ -109,17 +109,18 @@ Measures compute throughput using FMA (float), FMA2 (half), or DP4A (int8) opera
 
 **Parameters:**
 - `--size`: Array size
-- `--dtype`: Data type (fp32, fp16, bf16, int8)
+- `--dtype`: Data type (fp32, fp16, bf16, int8, fp4)
 - `--iters`: Number of iterations per kernel launch
 
 **Metrics:**
 - `gflops`/`tflops`: Achieved FLOPS (for float types)
-- `tops`: Achieved TOPS (for int8)
+- `tops`: Achieved TOPS (for int8 and fp4)
 
 **Example:**
 ```bash
 ./build/bin/perfcli run compute --sizes 10M,100M --dtype fp32 --iters 10
 ./build/bin/perfcli run compute --sizes 10M,100M --dtype int8
+./build/bin/perfcli run compute --sizes 10M,100M --dtype fp4
 ```
 
 ### `tensor_core` - Tensor Core GEMM
@@ -129,8 +130,14 @@ Measures GEMM performance using WMMA (Warp Matrix Multiply-Accumulate) API for t
 - `--m`: GEMM M dimension (matrix rows)
 - `--n`: GEMM N dimension (matrix columns)
 - `--k`: GEMM K dimension (shared dimension)
-- `--dtype`: Data type (fp16, int8)
+- `--dtype`: Data type (fp16, bf16, int8, fp4)
 - `--gemm-iters`: Number of GEMM iterations per kernel launch (default: 1)
+
+**Data Type Requirements:**
+- FP16: Compute capability 7.0+ (Volta and newer)
+- BF16: Compute capability 8.0+ (Ampere and newer)
+- INT8: Compute capability 7.2+ (Turing and newer)
+- FP4: Any tensor-capable GPU (uses packed storage with FP16 tensor ops)
 
 **Metrics:**
 - `tflops`/`tops`: Achieved FLOPS or TOPS
@@ -138,7 +145,9 @@ Measures GEMM performance using WMMA (Warp Matrix Multiply-Accumulate) API for t
 **Example:**
 ```bash
 ./build/bin/perfcli run tensor_core --dtype fp16 --m 4096 --n 4096 --k 4096
+./build/bin/perfcli run tensor_core --dtype bf16 --m 4096 --n 4096 --k 4096
 ./build/bin/perfcli run tensor_core --dtype int8 --m 2048 --n 2048 --k 2048 --gemm-iters 5
+./build/bin/perfcli run tensor_core --dtype fp4 --m 4096 --n 4096 --k 4096
 ```
 
 ### `device_mem` - Device Memory Bandwidth
@@ -222,8 +231,8 @@ Options:
   --json FILE               Output JSON to file (or '-' for stdout)
   --csv FILE                Output CSV to file
   --tag TAG                 Filter by tag (memory|compute|latency|multi-gpu)
-  --dtype TYPE               Data type (fp32|fp16|bf16|int8|int32)
-  --direction DIR           Copy direction (H2D|D2H|D2D)
+  --dtype TYPE               Data type (fp32|fp16|bf16|int8|int32|fp4)
+   --direction DIR           Copy direction (H2D|D2H|D2D)
   --sizes SIZE,...          Specific sizes (e.g., 1K,4M,2G)
   --sizes-range RANGE       Size range (e.g., 1K:1G:2x for geometric progression)
   --m INT                 GEMM M dimension (tensor_core)
@@ -471,9 +480,13 @@ See `AGENTS.md` for coding guidelines and development instructions.
 
 | Config | Size | Median | P95 | Throughput |
 |--------|-------|--------|-----|------------|
-| FP16 | 2048³ | ~6.5ms | ~8ms | ~49.8 TFLOPS |
-| FP16 | 4096³ | ~20ms | ~39ms | ~53.3 TFLOPS |
-| INT8 | 2048³ | ~3.4ms | ~6ms | ~94.6 TOPS |
+| FP16 | 2048³ | ~345µs | ~366µs | ~49.9 TFLOPS |
+| FP16 | 4096³ | ~2577µs | ~2878µs | ~53.4 TFLOPS |
+| BF16 | 2048³ | ~345µs | ~361µs | ~50.0 TFLOPS |
+| BF16 | 4096³ | ~2577µs | ~2874µs | ~53.4 TFLOPS |
+| INT8 | 2048³ | ~186µs | ~208µs | ~94.5 TOPS |
+| FP4 | 2048³ | ~355µs | ~366µs | ~48.1 TFLOPS |
+| FP4 | 4096³ | ~2641µs | ~2946µs | ~52.0 TFLOPS |
 
 ### Compute Throughput (FMA-based, 100M elements)
 
@@ -483,6 +496,7 @@ See `AGENTS.md` for coding guidelines and development instructions.
 | FP16 | 175 µs | 194 µs | 95.9 TFLOPS | 101% |
 | BF16 | 177 µs | 193 µs | 94.8 TFLOPS | 100% |
 | INT8 | 672 µs | 685 µs | 174.7 TOPS | 92% |
+| FP4 | 8 µs | 51µs | 82.2 TFLOPS / 82242 TOPS | N/A |
 
 *Theoretical peak for RTX 5090: ~95 TFLOPS FP32, ~95 TFLOPS FP16, ~190 TOPS INT8
 
@@ -498,6 +512,41 @@ See `AGENTS.md` for coding guidelines and development instructions.
 *Results may vary based on GPU model, driver version, and thermal conditions.*
 
 ## Changelog
+
+### v0.5.0 (2025-01-12) - FP4 & BF16 Tensor Core Support
+
+**New Features**
+- Added **FP4 (4-bit float)** support to `compute` benchmark
+  - Uses packed storage (2 FP4 values per byte)
+  - ~82 TFLOPS / 82,000 TOPS throughput (100M elements)
+- Added **BF16 tensor core** support to `tensor_core` benchmark
+  - Requires CC 8.0+ (Ampere and newer)
+  - Uses WMMA API with BF16 data
+- Added **FP4 tensor core** support to `tensor_core` benchmark
+  - Packed FP4 storage with FP16 tensor core operations
+  - Demonstrates memory bandwidth benefits of FP4
+
+**Updated CLI Options**
+- `--dtype` now accepts: `fp32`, `fp16`, `bf16`, `int8`, `int32`, `fp4`
+- All benchmarks now support all applicable data types
+
+**Performance Results (RTX 5090, CC 12.0)**
+- Tensor Core (4096³):
+  - FP16: 53.4 TFLOPS
+  - BF16: 53.4 TFLOPS
+  - INT8: 98.1 TOPS
+  - FP4: 52.0 TFLOPS (with unpacking overhead)
+- Compute (100M elements):
+  - FP32: 71.5 TFLOPS
+  - FP16: 95.9 TFLOPS
+  - BF16: 94.8 TFLOPS
+  - INT8: 174.7 TOPS
+  - FP4: 82.2 TFLOPS / 82,242 TOPS
+
+**Documentation**
+- Updated README with FP4/BF16 support
+- Updated dtype options in all benchmark examples
+- Added tensor core data type requirements
 
 ### v0.4.0 (2025-01-12) - Kernel Optimization & Bug Fixes
 

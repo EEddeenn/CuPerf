@@ -388,8 +388,10 @@ Store raw samples and compute robust summaries:
 ### Phase 2 (completed)
 6. **TensorCore**
     - WMMA-based GEMM (tensor cores)
-    - FP16 matrix multiply (16x16x16 tiles)
-    - INT8 matrix multiply (16x16x16 tiles)
+    - FP16 matrix multiply (16x16x16 tiles) - CC 7.0+
+    - BF16 matrix multiply (16x16x16 tiles) - CC 8.0+
+    - INT8 matrix multiply (16x16x16 tiles) - CC 7.2+
+    - FP4 matrix multiply (packed storage, uses FP16 tensor ops)
     - metric: TFLOP/s or TOPS
     - requires CC 7.0+ (tensor cores)
     - diagnostic, not a cuBLAS competitor
@@ -615,7 +617,8 @@ Treat GPU tests as optional in CI.
     - one registry registration line
 - ✅ C++23 optimizations (std::span, [[nodiscard]], constexpr, string_view)
 - ✅ CUDA kernel optimizations (warp shuffle, unroll, launch_bounds, noinline)
-- ✅ Tensor core WMMA API support (FP16, INT8)
-- Documentation: README.md + AGENTS.md
+- ✅ Tensor core WMMA API support (FP16, BF16, INT8, FP4)
+- ✅ Compute benchmark FP4 support (packed storage)
+- Documentation: README.md + AGENTS.md + DESIGN.md
 
 ---

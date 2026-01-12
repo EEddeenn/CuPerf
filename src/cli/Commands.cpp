@@ -286,17 +286,21 @@ void Commands::save_results_csv(const std::vector<BenchmarkResult>& results,
                                  const std::string& filename) {
   std::ofstream file(filename);
 
-  file << "benchmark,device,median_us,p95_us,p99_us,mean_us,stddev_us";
-
+  std::vector<std::string> metric_keys;
   for (const auto& result : results) {
     if (!result.metrics.empty()) {
       for (const auto& [key, _] : result.metrics) {
-        file << "," << key;
-        break;
+        if (std::find(metric_keys.begin(), metric_keys.end(), key) == metric_keys.end()) {
+          metric_keys.push_back(key);
+        }
       }
     }
   }
 
+  file << "benchmark,device,median_us,p95_us,p99_us,mean_us,stddev_us";
+  for (const auto& key : metric_keys) {
+    file << "," << key;
+  }
   file << "\n";
 
   for (const auto& result : results) {
@@ -308,10 +312,12 @@ void Commands::save_results_csv(const std::vector<BenchmarkResult>& results,
          << result.mean_us << ","
          << result.stddev_us;
 
-    if (!result.metrics.empty()) {
-      for (const auto& [_, value] : result.metrics) {
-        file << "," << value;
-        break;
+    for (const auto& key : metric_keys) {
+      auto it = result.metrics.find(key);
+      if (it != result.metrics.end()) {
+        file << "," << it->second;
+      } else {
+        file << ",";
       }
     }
 

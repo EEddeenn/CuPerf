@@ -70,6 +70,7 @@ ctest --test-dir build -V                   # Run all tests
 - Spaces around binary operators: `a + b`, `a == b`
 - No spaces inside parentheses: `(a, b)`, not `( a, b )`
 - Use `[[nodiscard]]` on all functions returning values that must not be ignored (getters, factories, etc.)
+- Lambda pattern for parameter extraction: `auto get_param = [&](...) { ... };`
 
 ### Type System
 
@@ -81,7 +82,7 @@ RAII for all resources. `DeviceBuffer<T>` for device memory, `HostBuffer<T>` for
 
 ### CUDA-Specific Guidelines
 
-Always `CUDA_CHECK(call)` - throws `CudaError`. Use `EventTimer` for timing: `timer.start()` → enqueue → `timer.stop()` → `timer.sync()` → `timer.elapsed_microseconds()`. Avoid `cudaDeviceSynchronize()` in inner loops. Call `cudaGetLastError()` after kernel launches. Don't measure allocation time or create streams/events in inner loops.
+Always `CUDA_CHECK(call)` - throws `CudaError`. Use `CUDA_CHECK_LAST()` after kernel launches to detect launch errors. Use `EventTimer` for timing: `timer.start()` → enqueue → `timer.stop()` → `timer.sync()` → `timer.elapsed_microseconds()`. Avoid `cudaDeviceSynchronize()` in inner loops. Don't measure allocation time or create streams/events in inner loops. Use `inline __device__` for small helper functions. Use `extern __shared__` for dynamic shared memory.
 
 ### CUDA Optimization for Modern GPUs (RTX 5090, Compute 12.0+)
 

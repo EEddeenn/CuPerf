@@ -14,6 +14,7 @@ std::string data_type_to_string(DataType dtype) {
     case DataType::BFloat16: return "bf16";
     case DataType::Int8: return "int8";
     case DataType::Int32: return "int32";
+    case DataType::Float4: return "fp4";
   }
   return "unknown";
 }
@@ -24,6 +25,7 @@ DataType string_to_data_type(const std::string& str) {
   if (str == "bf16" || str == "bfloat16") return DataType::BFloat16;
   if (str == "int8") return DataType::Int8;
   if (str == "int32" || str == "int") return DataType::Int32;
+  if (str == "fp4" || str == "float4") return DataType::Float4;
   return DataType::Float32;
 }
 
@@ -34,6 +36,7 @@ size_t data_type_size(DataType dtype) {
     case DataType::BFloat16: return 2;
     case DataType::Int8: return 1;
     case DataType::Int32: return sizeof(int32_t);
+    case DataType::Float4: return 1;
   }
   return sizeof(float);
 }

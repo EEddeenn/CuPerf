@@ -22,7 +22,7 @@ BenchmarkSpec MemcpyBandwidth::metadata() const {
     {"async", "off"}
   };
   spec.tags = {BenchmarkTag::Memory};
-  spec.supported_types = {DataType::Float32, DataType::Float16, DataType::Int8};
+  spec.supported_types = {DataType::Float32, DataType::Float16, DataType::Int8, DataType::Float4};
   return spec;
 }
 

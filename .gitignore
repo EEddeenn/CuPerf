@@ -90,3 +90,10 @@ nsight-profiles/
 *.gcda
 *.gcno
 coverage/
+
+# FP4 benchmark data (optional)
+fp4_data/
+fp4_results/
+
+# Tensor Core benchmark data
+tensor_core_results/

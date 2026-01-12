@@ -32,7 +32,8 @@ enum class DataType {
   Float16,
   BFloat16,
   Int8,
-  Int32
+  Int32,
+  Float4
 };
 
 std::string data_type_to_string(DataType dtype);
