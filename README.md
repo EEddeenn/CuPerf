@@ -513,6 +513,21 @@ See `AGENTS.md` for coding guidelines and development instructions.
 
 ## Changelog
 
+### v0.5.1 (2026-01-12) - Minor Bug Fixes & Documentation
+
+**Bug Fixes**
+- Added null pointer checks to `Event::sync()` and `Event::record()` for consistency with `Stream::sync()`
+- Prevents crashes on moved-from Event objects
+
+**Documentation Updates**
+- Fixed AGENTS.md NVML option description to match actual CMakeLists.txt behavior
+- Now correctly documents that NVML is default ON but disabled as not yet implemented
+
+**Testing**
+- All unit tests pass (test_statistics, test_types)
+- All benchmarks tested successfully (compute, reduction, tensor_core, device_mem)
+- Verification mode works correctly across all benchmarks
+
 ### v0.5.0 (2026-01-12) - FP4 & BF16 Tensor Core Support
 
 **New Features**

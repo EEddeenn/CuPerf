@@ -621,6 +621,8 @@ Treat GPU tests as optional in CI.
 - ✅ CUDA kernel optimizations (warp shuffle, unroll, launch_bounds, noinline)
 - ✅ Tensor core WMMA API support (FP16, BF16, INT8, FP4)
 - ✅ Compute benchmark FP4 support (packed storage)
-- Documentation: README.md + AGENTS.md + DESIGN.md
+- ✅ Documentation: README.md + AGENTS.md + DESIGN.md
+- ✅ Robust error handling with null pointer checks in Stream/Event
+- ✅ Consistent documentation across CMakeLists.txt and AGENTS.md
 
 ---
