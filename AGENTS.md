@@ -1,4 +1,4 @@
-# Agent Guidelines for Kuda (CUDA Performance CLI Tool)
+# Agent Guidelines for CuPerf (CUDA Performance CLI Tool)
 
 ## Build System
 

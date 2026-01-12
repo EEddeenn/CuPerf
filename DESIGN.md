@@ -1,7 +1,6 @@
 # CUDA Performance Test CLI Tool — Software Architecture Plan
 
 This document describes a detailed, implementation-ready architecture for a **CUDA performance test program** built as a **CLI tool** using **modern CUDA** (CUDA 13.1 by default) and **modern C++** (C++23 by default). It is written to be "coding-agent friendly": clear components, responsibilities, file layout, interfaces, and step-by-step milestones.
-
 > **Status**: ✅ Fully implemented, tested, and optimized
 > Last updated: 2026-01-12
 
@@ -10,7 +9,7 @@ This document describes a detailed, implementation-ready architecture for a **CU
 ## 1) Goals and non-goals
 
 ### Goals
-- Provide a **CLI microbenchmark tool**(named Kuda) to characterize GPU performance:
+- Provide a **CLI microbenchmark tool** (named CuPerf) to characterize GPU performance:
   - Device memory bandwidth (VRAM/HBM)
   - H2D/D2H/D2D copies, pinned vs pageable host memory
   - Kernel launch overhead

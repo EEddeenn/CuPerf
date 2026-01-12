@@ -1,6 +1,6 @@
-# Kuda - CUDA Performance CLI Tool
+# CuPerf - CUDA Performance CLI Tool
 
-A modern, extensible command-line tool for benchmarking GPU performance on NVIDIA CUDA devices. Kuda provides accurate, reproducible measurements of memory bandwidth, compute throughput, tensor core performance, kernel launch overhead, and reduction performance.
+A modern, extensible command-line tool for benchmarking GPU performance on NVIDIA CUDA devices. CuPerf provides accurate, reproducible measurements of memory bandwidth, compute throughput, tensor core performance, kernel launch overhead, and reduction performance.
 
 ## Features
 
@@ -28,7 +28,7 @@ A modern, extensible command-line tool for benchmarking GPU performance on NVIDI
 ```bash
 # Clone repository
 git clone <repository-url>
-cd kuda
+cd cuperf
 
 # Configure and build (Release mode)
 cmake -B build -DCMAKE_BUILD_TYPE=Release
