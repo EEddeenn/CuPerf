@@ -1,5 +1,6 @@
 #include "cuperf/benchmarks/MemcpyBandwidth.hpp"
 #include "cuperf/util/Error.hpp"
+#include "cuperf/util/Utils.hpp"
 #include "cuperf/cuda/Memory.hpp"
 #include "cuperf/cuda/Stream.hpp"
 #include "cuperf/core/Statistics.hpp"
@@ -41,20 +42,6 @@ void MemcpyBandwidth::setup(BenchmarkContext& ctx, const std::map<std::string, s
   std::string direction_str = get_param("direction", "H2D");
   std::string pinned_str = get_param("pinned", "off");
   std::string async_str = get_param("async", "off");
-
-  auto parse_size = [](const std::string& s) -> size_t {
-    std::string suffix;
-    size_t value = std::stoull(s);
-    if (!s.empty()) {
-      char last = s.back();
-      switch (last) {
-        case 'K': case 'k': value *= 1024; break;
-        case 'M': case 'm': value *= 1024 * 1024; break;
-        case 'G': case 'g': value *= 1024 * 1024 * 1024; break;
-      }
-    }
-    return value;
-  };
 
   size_ = parse_size(size_str);
 
@@ -165,15 +152,13 @@ bool MemcpyBandwidth::verify_result(BenchmarkContext& ctx) {
   std::memset(src_pattern.data(), 0xAA, verify_size);
   std::memset(dst_pattern.data(), 0x55, verify_size);
 
-  void* d_verify = nullptr;
-  CUDA_CHECK(cudaMalloc(&d_verify, verify_size));
+  DeviceBuffer<uint8_t> d_verify(verify_size);
 
-  CUDA_CHECK(cudaMemcpy(d_verify, src_pattern.data(), verify_size, cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(dst_pattern.data(), d_verify, verify_size, cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpy(d_verify.get(), src_pattern.data(), verify_size, cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(dst_pattern.data(), d_verify.get(), verify_size, cudaMemcpyDeviceToHost));
 
   bool verified = (std::memcmp(src_pattern.data(), dst_pattern.data(), verify_size) == 0);
 
-  cudaFree(d_verify);
   CUDA_CHECK_LAST();
 
   return verified;

@@ -1,5 +1,6 @@
 #include "cuperf/cli/Commands.hpp"
 #include "cuperf/cuda/Device.hpp"
+#include "cuperf/util/Utils.hpp"
 #include <fmt/core.h>
 #include <iostream>
 #include <fstream>
@@ -166,29 +167,11 @@ RunPlan Commands::build_run_plan(const Args& args) {
 
 std::vector<size_t> Commands::parse_sizes(const std::string& sizes_str) {
   std::vector<size_t> sizes;
-
-  auto parse_size = [](const std::string& s) -> size_t {
-    std::string suffix;
-    size_t value = std::stoull(s);
-
-    if (!s.empty()) {
-      char last = s.back();
-      switch (last) {
-        case 'K': case 'k': value *= 1024; break;
-        case 'M': case 'm': value *= 1024 * 1024; break;
-        case 'G': case 'g': value *= 1024 * 1024 * 1024; break;
-      }
-    }
-
-    return value;
-  };
-
   std::istringstream iss(sizes_str);
   std::string token;
   while (std::getline(iss, token, ',')) {
     sizes.push_back(parse_size(token));
   }
-
   return sizes;
 }
 
@@ -207,8 +190,8 @@ std::vector<size_t> Commands::parse_size_range(const std::string& range_str) {
     return sizes;
   }
 
-  size_t start = parse_sizes(parts[0])[0];
-  size_t stop = parse_sizes(parts[1])[0];
+  size_t start = parse_size(parts[0]);
+  size_t stop = parse_size(parts[1]);
   double factor = std::stod(parts[2]);
 
   for (size_t size = start; size <= stop; size = static_cast<size_t>(size * factor)) {

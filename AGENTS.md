@@ -76,6 +76,12 @@ ctest --test-dir build -V                   # Run all tests
 
 Use strong types over primitives (`DeviceIndex` vs `int`). Prefer `std::chrono` for timing, `std::optional` for nullables, `std::expected` (C++23) for errors, `std::span` for array views, `std::format` for string formatting. Use `auto` when type is obvious from context; prefer explicit types otherwise.
 
+### Utility Functions
+
+Use utility functions from `include/cuperf/util/Utils.hpp`:
+- `parse_size(str)` - Parse size strings with suffixes (K, M, G)
+- `format_size(bytes)` - Format bytes to human-readable string (KB, MB, GB, TB)
+
 ### Memory Management
 
 RAII for all resources. `DeviceBuffer<T>` for device memory, `HostBuffer<T>` for host memory (pageable or pinned). Use `std::make_unique`/`std::make_shared`, never raw `new`/`delete`. Follow rule of five for resource-managing classes.

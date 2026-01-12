@@ -42,7 +42,10 @@ public:
 
   void reset() {
     if (data_) {
-      cudaFree(data_);
+      cudaError_t err = cudaFree(data_);
+      if (err != cudaSuccess) {
+        (void)err;
+      }
       data_ = nullptr;
       size_ = 0;
     }
@@ -117,7 +120,10 @@ public:
   void reset() {
     if (data_) {
       if (type_ == HostMemoryType::Pinned) {
-        cudaFreeHost(data_);
+        cudaError_t err = cudaFreeHost(data_);
+        if (err != cudaSuccess) {
+          (void)err;
+        }
       } else {
         delete[] static_cast<T*>(data_);
       }

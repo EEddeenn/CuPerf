@@ -1,5 +1,6 @@
 #include "cuperf/benchmarks/DeviceMemBandwidth.hpp"
 #include "cuperf/util/Error.hpp"
+#include "cuperf/util/Utils.hpp"
 #include "cuperf/cuda/Memory.hpp"
 #include "cuperf/cuda/Stream.hpp"
 #include "cuperf/core/Statistics.hpp"
@@ -71,20 +72,6 @@ void DeviceMemBandwidth::setup(BenchmarkContext& ctx, const std::map<std::string
   std::string size_str = get_param("size", "1M");
   std::string dtype_str = get_param("dtype", "fp32");
   access_pattern_ = get_param("pattern", "read_write");
-
-  auto parse_size = [](const std::string& s) -> size_t {
-    std::string suffix;
-    size_t value = std::stoull(s);
-    if (!s.empty()) {
-      char last = s.back();
-      switch (last) {
-        case 'K': case 'k': value *= 1024; break;
-        case 'M': case 'm': value *= 1024 * 1024; break;
-        case 'G': case 'g': value *= 1024 * 1024 * 1024; break;
-      }
-    }
-    return value;
-  };
 
   size_ = parse_size(size_str);
 

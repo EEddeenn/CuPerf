@@ -62,6 +62,7 @@ file(GLOB_RECURSE CUPERF_CXX_SOURCES
   "src/cli/*.cpp"
   "src/core/*.cpp"
   "src/cuda/*.cpp"
+  "src/util/*.cpp"
 )
 
 file(GLOB_RECURSE CUPERF_CUDA_SOURCES

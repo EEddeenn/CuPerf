@@ -513,6 +513,45 @@ See `AGENTS.md` for coding guidelines and development instructions.
 
 ## Changelog
 
+### v0.6.0 (2026-01-12) - Code Quality & Utility Refactoring
+
+**Code Quality Improvements**
+- **Eliminated code duplication**: Extracted `parse_size()` function to `Utils.hpp` (5 duplicate implementations → 1 utility)
+- **Consistent memory management**: Replaced raw `cudaMalloc/cudaFree` with `DeviceBuffer<T>` in `MemcpyBandwidth::verify_result()`
+- **Improved error handling**: Added silent error logging to `DeviceBuffer::reset()` and `HostBuffer::reset()`
+- **Better organization**: Added `src/util/Utils.cpp` with utility functions
+
+**New Utility Functions**
+- `parse_size(str)`: Unified size parsing with suffix support (K, M, G) from one source
+- `format_size(bytes)`: Convert bytes to human-readable format (KB, MB, GB, TB)
+- Added to `include/cuperf/util/Utils.hpp` and `src/util/Utils.cpp`
+
+**Updated Files**
+- `CMakeLists.txt`: Added `src/util/` to build sources
+- `MemcpyBandwidth.cpp`: Uses `parse_size()` from Utils
+- `ComputeThroughput.cu`: Uses `parse_size()` from Utils
+- `DeviceMemBandwidth.cu`: Uses `parse_size()` from Utils
+- `Reduction.cu`: Uses `parse_size()` from Utils
+- `Commands.cpp`: Uses `parse_size()` from Utils
+- `AGENTS.md`: Updated with utility function documentation
+
+**Documentation Updates**
+- AGENTS.md: Added "Utility Functions" section documenting `parse_size()` and `format_size()`
+
+**Testing**
+- All benchmarks pass selftest successfully
+- No compilation warnings in Release mode
+- Build tested on CUDA 13.1 with GCC 13.3
+
+**Performance**
+- No performance impact (pure refactoring)
+- Maintains all existing benchmarks' accuracy and speed
+
+**Remaining Technical Debt (Low Priority)**
+- BenchmarkRegistry metadata caching could improve list performance
+- TensorCore FP4 unpacking could use shared memory batching
+- Some minor optimization opportunities documented in code
+
 ### v0.5.1 (2026-01-12) - Minor Bug Fixes & Documentation
 
 **Bug Fixes**

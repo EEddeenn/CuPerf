@@ -10,7 +10,7 @@ Args Args::parse(int argc, char* argv[]) {
   CLI::App app{"CUDA Performance Benchmarking CLI Tool", "cuperf"};
 
   app.set_help_flag("-h,--help", "Display this help and exit");
-  app.set_version_flag("-v,--version", "0.1.0");
+  app.set_version_flag("-v,--version", "0.6.0");
 
   auto info_cmd = app.add_subcommand("info", "Display GPU and system information");
   info_cmd->callback([&] { args.command_ = Command::Info; });
